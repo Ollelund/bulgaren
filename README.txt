@@ -23,3 +23,20 @@ GitHub Pages:
 
 Obs:
 Wake Lock, vibration och bakgrundsbeteende beror på webbläsare/telefon. PWA:n använder en faktisk sluttid för vilan, så tiden korrigeras direkt när appen åter blir aktiv.
+
+V4:
+- Pågående pass sparas lokalt och kan lämnas tillfälligt.
+- Statistik, historik och inställningar kan öppnas mitt under ett pass.
+- Knapp för att återgå till pågående pass.
+- Pågående pass kan återställas efter att appen stängts/öppnats igen.
+- Avbryt pass utan att spara det i historiken.
+- Vilotimerns absoluta sluttid sparas och fortsätter korrekt.
+- Statistik visar total lyftvolym sedan start.
+- Statistik visar månad-för-månad lyftvolym för de senaste 12 månaderna.
+- Lyftvolym räknas som vikt × repetitioner för varje genomfört set.
+
+V4.1:
+- Stor röd "RADERA ALL DATA"-knapp längst ned på Inställningar.
+- Två bekräftelsedialoger innan radering.
+- Raderar historik, statistik, maxvikt, inställningar och pågående pass.
+- Påminner om att data inte kan återställas utan exporterad backup.

@@ -19,7 +19,7 @@ h1{font-size:30px;margin:0}.muted,.small{color:var(--muted)}.small{font-size:13p
 label{display:block;color:var(--muted);font-size:13px;margin:0 0 6px}
 input,select{width:100%;background:#0b1323;color:white;border:1px solid #334155;border-radius:12px;padding:12px;font-size:18px}
 button{border:0;border-radius:13px;padding:14px 16px;font-weight:800;font-size:16px;color:#fff;cursor:pointer}
-button:disabled{opacity:.5;cursor:not-allowed}.full{width:100%}.primary{background:var(--blue)}.ok{background:var(--green)}.bad{background:var(--red)}.ghost{background:#334155}.warn{background:var(--amber)}
+button:disabled{opacity:.5;cursor:not-allowed}.full{width:100%}.primary{background:var(--blue)}.ok{background:var(--green)}.bad{background:var(--red)}.ghost{background:#334155}.warn{background:var(--amber)}.danger{background:#b91c1c;border:2px solid #ef4444}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:9px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
 .metric{background:#0b1323;border:1px solid #263244;border-radius:14px;padding:12px}.metric b{display:block;font-size:24px;margin-top:3px}
 .setno{font-weight:800;color:var(--muted);letter-spacing:.05em}.reps{font-size:34px;font-weight:900;margin:8px 0 0}.weight{font-size:64px;font-weight:950;line-height:1;margin:6px 0}
@@ -43,7 +43,13 @@ hr{border:0;border-top:1px solid #263244;margin:14px 0}
 </head>
 <body>
 <div class="wrap">
-<header><div><h1>Bulgaren</h1><div class="small">Träning, progression och statistik</div></div><div class="small">v3</div></header>
+<header><div><h1>Bulgaren</h1><div class="small">Träning, progression och statistik</div></div><div class="small">v4</div></header>
+<div id="resumeBanner" class="card hidden" style="border-color:#2563eb">
+  <div class="historyHead">
+    <div><b>Pågående träningspass</b><div id="resumeText" class="small"></div></div>
+    <button id="resumeBtn" class="primary" style="width:auto">Återgå till pass</button>
+  </div>
+</div>
 
 <section id="view-home" class="view">
   <div class="card">
@@ -73,6 +79,10 @@ hr{border:0;border-top:1px solid #263244;margin:14px 0}
       <button id="failBtn" class="bad">✕ KLARADE INTE</button>
     </div>
     <button id="undoBtn" class="ghost full hidden" style="margin-top:9px">↩ Ångra senaste set</button>
+    <div class="grid2" style="margin-top:9px">
+      <button id="leaveWorkoutBtn" class="ghost">← Lämna passet tillfälligt</button>
+      <button id="abortWorkoutBtn" class="warn">Avbryt pass</button>
+    </div>
   </div>
 
   <div id="restCard" class="card center hidden">
@@ -94,7 +104,14 @@ hr{border:0;border-top:1px solid #263244;margin:14px 0}
       <div class="metric"><span class="small">Godkända pass</span><b id="statPassed">0</b></div>
     </div>
   </div>
+  <div class="card">
+    <div class="grid2">
+      <div class="metric"><span class="small">Totalt lyft sedan start</span><b id="statTonnage">0 kg</b></div>
+      <div class="metric"><span class="small">Senaste 12 månaderna</span><b id="statTonnage12">0 kg</b></div>
+    </div>
+  </div>
   <div class="card"><h3>Utveckling</h3><canvas id="chart" width="560" height="230"></canvas><div class="small">Visar maxvikten som användes vid varje genomfört pass.</div></div>
+  <div class="card"><h3>Lyft volym – senaste 12 månaderna</h3><canvas id="volumeChart" width="560" height="250"></canvas><div class="small">Total träningsvolym per månad, beräknad som vikt × repetitioner för genomförda set.</div></div>
   <div class="card"><h3>Milstolpar</h3><div id="milestones"></div></div>
 </section>
 
@@ -124,6 +141,11 @@ hr{border:0;border-top:1px solid #263244;margin:14px 0}
     <div class="small" style="margin-top:8px">Import ersätter nuvarande historik och inställningar med innehållet i backupfilen.</div>
   </div>
   <button id="saveSettingsBtn" class="ok full">Spara inställningar</button>
+  <div class="card" style="margin-top:16px;border-color:#7f1d1d">
+    <h3 style="color:#fca5a5">Rensa all data</h3>
+    <p class="small">Raderar träningshistorik, statistik, aktuell maxvikt, inställningar och eventuellt pågående pass från den här enheten.</p>
+    <button id="clearAllDataBtn" class="danger full" style="font-size:19px;padding:17px">RADERA ALL DATA</button>
+  </div>
 </section>
 </div>
 
@@ -140,12 +162,36 @@ const PROGRAM=[{reps:8,pct:60},{reps:1,pct:95},{reps:7,pct:65},{reps:2,pct:90},{
 const DEFAULT_SETTINGS={restSeconds:240,weightStep:2.5,barWeight:20,plates:[25,20,15,10,5,2.5,1.25],soundEnabled:true,vibrationEnabled:true,wakeLockEnabled:true};
 const $=id=>document.getElementById(id);
 let settings=loadSettings();
-let state={max:0,idx:0,results:Array(8).fill(null),timer:null,restEndsAt:null,beep30Played:false,endBeepsPlayed:false,lastMarkedIndex:null,wakeLock:null};
+let state={max:0,idx:0,results:Array(8).fill(null),timer:null,restEndsAt:null,beep30Played:false,endBeepsPlayed:false,lastMarkedIndex:null,wakeLock:null,active:false};
 
 function loadSettings(){try{return {...DEFAULT_SETTINGS,...JSON.parse(localStorage.getItem('bulgarenSettings')||'{}')}}catch{return {...DEFAULT_SETTINGS}}}
 function saveSettings(){localStorage.setItem('bulgarenSettings',JSON.stringify(settings))}
 function history(){try{return JSON.parse(localStorage.getItem('bulgarenHistory')||'[]')}catch{return []}}
 function setHistory(h){localStorage.setItem('bulgarenHistory',JSON.stringify(h))}
+function saveActiveSession(){
+ if(!state.active){localStorage.removeItem('bulgarenActiveSession');updateResumeBanner();return}
+ const payload={max:state.max,idx:state.idx,results:state.results,restEndsAt:state.restEndsAt,beep30Played:state.beep30Played,endBeepsPlayed:state.endBeepsPlayed,lastMarkedIndex:state.lastMarkedIndex,active:true};
+ localStorage.setItem('bulgarenActiveSession',JSON.stringify(payload));updateResumeBanner();
+}
+function loadActiveSession(){
+ try{
+  const s=JSON.parse(localStorage.getItem('bulgarenActiveSession')||'null');
+  if(!s||!s.active)return false;
+  state={...state,...s,timer:null,wakeLock:null,active:true};
+  return true;
+ }catch{return false}
+}
+function clearActiveSession(){localStorage.removeItem('bulgarenActiveSession');state.active=false;updateResumeBanner()}
+function updateResumeBanner(){
+ const b=$('resumeBanner');if(!b)return;
+ let s=null;try{s=JSON.parse(localStorage.getItem('bulgarenActiveSession')||'null')}catch{}
+ if(s&&s.active){
+  b.classList.remove('hidden');
+  const completed=(s.results||[]).filter(x=>x!==null).length;
+  $('resumeText').textContent=`Max ${fmt(s.max)} kg · ${completed}/8 set registrerade${s.restEndsAt?' · vila pågår':''}`;
+ }else b.classList.add('hidden');
+}
+
 function fmt(v){if(v===null||v===undefined||Number.isNaN(v))return'–';return Number.isInteger(v)?String(v):Number(v).toFixed(2).replace(/0+$/,'').replace(/\.$/,'').replace('.',',')}
 function roundStep(v){return Math.round(v/settings.weightStep)*settings.weightStep}
 function currentWeight(i){return roundStep(state.max*PROGRAM[i].pct/100)}
@@ -174,6 +220,7 @@ function showView(name){
  document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));
  $(`view-${name}`).classList.remove('hidden');
  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===name));
+ updateResumeBanner();
  if(name==='home')renderHome();
  if(name==='stats')renderStats();
  if(name==='history')renderHistory();
@@ -201,13 +248,13 @@ async function releaseWakeLock(){try{if(state.wakeLock)await state.wakeLock.rele
 function startWorkout(){
  const val=parseFloat(String($('maxWeight').value).replace(',','.'));
  if(!val||val<=0){toast('Ange en giltig maxvikt');return}
- state={max:roundStep(val),idx:0,results:Array(8).fill(null),timer:null,restEndsAt:null,beep30Played:false,endBeepsPlayed:false,lastMarkedIndex:null,wakeLock:null};
+ state={max:roundStep(val),idx:0,results:Array(8).fill(null),timer:null,restEndsAt:null,beep30Played:false,endBeepsPlayed:false,lastMarkedIndex:null,wakeLock:null,active:true};
  localStorage.setItem('bulgarenCurrentMax',state.max);
  document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));
  $('view-workout').classList.remove('hidden');
- document.querySelector('.nav').classList.add('hidden');
+ document.querySelector('.nav').classList.remove('hidden');
  $('restCard').classList.add('hidden');$('successBtn').disabled=false;$('failBtn').disabled=false;$('undoBtn').classList.add('hidden');
- renderCurrent();requestWakeLock();
+ saveActiveSession();renderCurrent();requestWakeLock();
 }
 function renderCurrent(){
  if(state.idx>=8)return finishWorkout();
@@ -216,7 +263,7 @@ function renderCurrent(){
  $('reps').textContent=`${s.reps} ${s.reps===1?'REP':'REPS'}`;
  $('weight').textContent=`${fmt(currentWeight(state.idx))} KG`;
  $('plateText').textContent=platePlan(currentWeight(state.idx));
- renderSetList();
+ renderSetList();saveActiveSession();
 }
 function renderSetList(){
  $('setList').innerHTML=PROGRAM.map((s,i)=>{
@@ -226,7 +273,7 @@ function renderSetList(){
 }
 function markResult(ok){
  if(state.results[state.idx]!==null)return;
- state.results[state.idx]=ok;state.lastMarkedIndex=state.idx;renderSetList();
+ state.results[state.idx]=ok;state.lastMarkedIndex=state.idx;renderSetList();saveActiveSession();
  $('successBtn').disabled=true;$('failBtn').disabled=true;$('undoBtn').classList.remove('hidden');
  if(state.idx===7){setTimeout(finishWorkout,250);return}
  startRest();
@@ -236,7 +283,7 @@ function startRest(){
  $('restCard').classList.remove('hidden');
  const ni=state.idx+1;
  $('nextSetText').innerHTML=`<b>NÄSTA: ${PROGRAM[ni].reps} ${PROGRAM[ni].reps===1?'REP':'REPS'} × ${fmt(currentWeight(ni))} KG</b><br><span class="small">${platePlan(currentWeight(ni))}</span>`;
- clearInterval(state.timer);updateTimerFromClock();state.timer=setInterval(updateTimerFromClock,250);
+ clearInterval(state.timer);saveActiveSession();updateTimerFromClock();state.timer=setInterval(updateTimerFromClock,250);
 }
 function updateTimerFromClock(){
  if(!state.restEndsAt)return;
@@ -248,13 +295,13 @@ function updateTimerFromClock(){
 }
 function nextSet(){
  clearInterval(state.timer);state.timer=null;state.restEndsAt=null;$('restCard').classList.add('hidden');
- state.idx++;$('successBtn').disabled=false;$('failBtn').disabled=false;$('undoBtn').classList.add('hidden');renderCurrent();
+ state.idx++;$('successBtn').disabled=false;$('failBtn').disabled=false;$('undoBtn').classList.add('hidden');saveActiveSession();renderCurrent();
 }
 function undoLast(){
  if(state.lastMarkedIndex===null)return;
  clearInterval(state.timer);state.timer=null;state.restEndsAt=null;$('restCard').classList.add('hidden');
  state.idx=state.lastMarkedIndex;state.results[state.idx]=null;state.lastMarkedIndex=null;
- $('successBtn').disabled=false;$('failBtn').disabled=false;$('undoBtn').classList.add('hidden');renderCurrent();toast('Senaste set återställt');
+ $('successBtn').disabled=false;$('failBtn').disabled=false;$('undoBtn').classList.add('hidden');saveActiveSession();renderCurrent();toast('Senaste set återställt');
 }
 function finishWorkout(){
  clearInterval(state.timer);releaseWakeLock();
@@ -262,7 +309,7 @@ function finishWorkout(){
  const h=history();
  h.unshift({id:crypto.randomUUID?crypto.randomUUID():String(Date.now()),date:new Date().toISOString(),max:state.max,passed,count,nextMax,results:[...state.results],program:PROGRAM.map((p,i)=>({...p,weight:currentWeight(i)}))});
  setHistory(h.slice(0,500));localStorage.setItem('bulgarenCurrentMax',nextMax);
- document.querySelector('.nav').classList.remove('hidden');
+ clearActiveSession();
  showView('home');
  toast(passed?`Godkänt! Nästa max ${fmt(nextMax)} kg`:`${count}/8. Maxvikten ligger kvar.`);
 }
@@ -271,18 +318,69 @@ $('successBtn').addEventListener('click',()=>markResult(true));
 $('failBtn').addEventListener('click',()=>markResult(false));
 $('skipBtn').addEventListener('click',nextSet);
 $('undoBtn').addEventListener('click',undoLast);
+function resumeWorkout(){
+ if(!state.active&&!loadActiveSession())return;
+ document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));
+ $('view-workout').classList.remove('hidden');
+ document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
+ $('successBtn').disabled=state.results[state.idx]!==null;
+ $('failBtn').disabled=state.results[state.idx]!==null;
+ $('undoBtn').classList.toggle('hidden',state.lastMarkedIndex===null);
+ renderCurrent();
+ if(state.restEndsAt){
+  $('restCard').classList.remove('hidden');
+  updateTimerFromClock();
+  clearInterval(state.timer);state.timer=setInterval(updateTimerFromClock,250);
+ }else $('restCard').classList.add('hidden');
+ requestWakeLock();
+}
+function leaveWorkoutTemporarily(){saveActiveSession();releaseWakeLock();showView('home')}
+function abortWorkout(){
+ if(!confirm('Avbryta pågående pass? Passet sparas inte i historiken.'))return;
+ clearInterval(state.timer);state.timer=null;releaseWakeLock();clearActiveSession();
+ state={max:0,idx:0,results:Array(8).fill(null),timer:null,restEndsAt:null,beep30Played:false,endBeepsPlayed:false,lastMarkedIndex:null,wakeLock:null,active:false};
+ showView('home');toast('Passet avbröts');
+}
+$('resumeBtn').addEventListener('click',resumeWorkout);
+$('leaveWorkoutBtn').addEventListener('click',leaveWorkoutTemporarily);
+$('abortWorkoutBtn').addEventListener('click',abortWorkout);
 
+
+function sessionTonnage(x){
+ const results=x.results||[];
+ const prog=x.program||[];
+ let total=0;
+ for(let i=0;i<Math.min(results.length,prog.length);i++){
+  if(results[i]!==null && prog[i] && Number.isFinite(prog[i].weight)) total += prog[i].weight * prog[i].reps;
+ }
+ return total;
+}
+function last12MonthsBuckets(h){
+ const now=new Date(), buckets=[];
+ for(let i=11;i>=0;i--){
+  const d=new Date(now.getFullYear(),now.getMonth()-i,1);
+  buckets.push({key:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`,label:d.toLocaleDateString('sv-SE',{month:'short',year:'2-digit'}),value:0});
+ }
+ const map=Object.fromEntries(buckets.map(b=>[b.key,b]));
+ h.forEach(x=>{const d=new Date(x.date),k=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;if(map[k])map[k].value+=sessionTonnage(x)});
+ return buckets;
+}
 function renderStats(){
  const h=history().slice().reverse(), passed=h.filter(x=>x.passed);
  const start=h.length?h[0].max:null, current=getCurrentMax();
  $('statStart').textContent=start!==null?`${fmt(start)} kg`:'–';
  $('statGain').textContent=start!==null&&current!==null?`${current-start>=0?'+':''}${fmt(current-start)} kg`:'–';
  $('statPassed').textContent=passed.length;
+ const totalTonnage=h.reduce((s,x)=>s+sessionTonnage(x),0);
+ const buckets=last12MonthsBuckets(h);
+ const total12=buckets.reduce((s,b)=>s+b.value,0);
+ $('statTonnage').textContent=`${fmt(Math.round(totalTonnage))} kg`;
+ $('statTonnage12').textContent=`${fmt(Math.round(total12))} kg`;
  const firstByWeight={};
  passed.forEach(x=>{if(!firstByWeight[x.max])firstByWeight[x.max]=x.date});
  const entries=Object.entries(firstByWeight).sort((a,b)=>Number(a[0])-Number(b[0]));
  $('milestones').innerHTML=entries.length?entries.map(([w,d])=>`<div class="milestone"><b>${fmt(Number(w))} kg</b><div class="small">Första gången godkänd: ${new Date(d).toLocaleDateString('sv-SE')}</div></div>`).join(''):'<div class="small">Inga godkända milstolpar ännu.</div>';
- drawChart(h);
+ drawChart(h);drawVolumeChart(buckets);
 }
 function drawChart(h){
  const c=$('chart'),ctx=c.getContext('2d'),W=c.width,H=c.height;ctx.clearRect(0,0,W,H);
@@ -296,6 +394,19 @@ function drawChart(h){
  ctx.fillStyle='#94a3b8';ctx.font='12px system-ui';ctx.fillText(`${fmt(max)} kg`,3,pad+4);ctx.fillText(`${fmt(min)} kg`,3,H-pad+4);
 }
 
+
+function drawVolumeChart(buckets){
+ const c=$('volumeChart'),ctx=c.getContext('2d'),W=c.width,H=c.height;ctx.clearRect(0,0,W,H);
+ const padL=42,padR=10,padT=18,padB=42,max=Math.max(1,...buckets.map(b=>b.value));
+ ctx.strokeStyle='#334155';ctx.lineWidth=1;
+ for(let i=0;i<5;i++){const y=padT+(H-padT-padB)*i/4;ctx.beginPath();ctx.moveTo(padL,y);ctx.lineTo(W-padR,y);ctx.stroke()}
+ const slot=(W-padL-padR)/buckets.length,barW=Math.max(8,slot*.58);
+ ctx.fillStyle='#60a5fa';
+ buckets.forEach((b,i)=>{const h=(H-padT-padB)*(b.value/max),x=padL+i*slot+(slot-barW)/2,y=H-padB-h;ctx.fillRect(x,y,barW,h)});
+ ctx.fillStyle='#94a3b8';ctx.font='10px system-ui';ctx.textAlign='center';
+ buckets.forEach((b,i)=>{const x=padL+i*slot+slot/2;ctx.save();ctx.translate(x,H-15);ctx.rotate(-0.45);ctx.fillText(b.label,0,0);ctx.restore()});
+ ctx.textAlign='left';ctx.fillText(`${fmt(Math.round(max))} kg`,3,padT+5);
+}
 function renderHistory(){
  const h=history();
  $('history').innerHTML=h.length?h.map((x,i)=>{
@@ -318,7 +429,26 @@ function renderSettings(){
 $('saveSettingsBtn').addEventListener('click',()=>{
  const plateVals=$('plates').value.split(',').map(x=>parseFloat(x.trim().replace(',','.'))).filter(x=>x>0);
  settings={restSeconds:Math.max(30,parseInt($('restSeconds').value)||240),weightStep:parseFloat($('weightStep').value)||2.5,barWeight:Math.max(0,parseFloat($('barWeight').value)||20),plates:plateVals.length?plateVals:DEFAULT_SETTINGS.plates,soundEnabled:$('soundEnabled').checked,vibrationEnabled:$('vibrationEnabled').checked,wakeLockEnabled:$('wakeLockEnabled').checked};
- saveSettings();const cur=getCurrentMax();if(cur)localStorage.setItem('bulgarenCurrentMax',roundStep(cur));toast('Inställningarna sparades');renderHome();
+ saveSettings();const cur=getCurrentMax();if(cur)localStorage.setItem('bulgarenCurrentMax',roundStep(cur));saveActiveSession();toast('Inställningarna sparades');renderHome();
+});
+
+$('clearAllDataBtn').addEventListener('click',()=>{
+ const first=confirm('Är du säker på att du vill radera ALL data i Bulgaren? Detta raderar historik, statistik, maxvikt, inställningar och pågående pass.');
+ if(!first)return;
+ const second=confirm('Detta går inte att ångra om du inte har en exporterad backup. Vill du verkligen fortsätta?');
+ if(!second)return;
+ clearInterval(state.timer);
+ releaseWakeLock();
+ localStorage.removeItem('bulgarenHistory');
+ localStorage.removeItem('bulgarenCurrentMax');
+ localStorage.removeItem('bulgarenSettings');
+ localStorage.removeItem('bulgarenActiveSession');
+ settings={...DEFAULT_SETTINGS};
+ state={max:0,idx:0,results:Array(8).fill(null),timer:null,restEndsAt:null,beep30Played:false,endBeepsPlayed:false,lastMarkedIndex:null,wakeLock:null,active:false};
+ renderSettings();
+ updateResumeBanner();
+ showView('home');
+ toast('All Bulgaren-data har raderats');
 });
 $('exportBtn').addEventListener('click',()=>{
  const data={app:'Bulgaren',version:3,exportedAt:new Date().toISOString(),currentMax:getCurrentMax(),settings,history:history()};
@@ -336,7 +466,10 @@ $('importFile').addEventListener('change',async e=>{
 
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&state.restEndsAt)updateTimerFromClock();if(!document.hidden&&$('view-workout')&&!$('view-workout').classList.contains('hidden'))requestWakeLock()});
 window.addEventListener('focus',()=>{if(state.restEndsAt)updateTimerFromClock()});
-window.addEventListener('load',()=>{renderHome();if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js')});
+window.addEventListener('load',()=>{
+ loadActiveSession();renderHome();updateResumeBanner();
+ if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js');
+});
 </script>
 </body>
 </html>
