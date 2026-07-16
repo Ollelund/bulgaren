@@ -1,198 +1,342 @@
 <!doctype html>
 <html lang="sv">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <meta name="theme-color" content="#111827" />
-  <link rel="manifest" href="manifest.json" />
-  <link rel="icon" href="icon-192.png" />
-  <title>Bulgaren</title>
-  <style>
-    :root{--bg:#0b1220;--card:#111827;--muted:#94a3b8;--text:#f8fafc;--ok:#16a34a;--bad:#dc2626;--accent:#2563eb;--line:#263244}
-    *{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:linear-gradient(180deg,#0b1220,#0f172a);color:var(--text);min-height:100vh}
-    .wrap{max-width:560px;margin:0 auto;padding:18px}
-    h1{margin:6px 0 4px;font-size:32px}.sub{color:var(--muted);margin-bottom:18px}
-    .card{background:rgba(17,24,39,.96);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:14px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
-    label{display:block;color:var(--muted);font-size:14px;margin-bottom:7px}
-    input{width:100%;font-size:26px;padding:14px;border-radius:12px;border:1px solid #334155;background:#0f172a;color:white}
-    button{border:0;border-radius:14px;padding:15px 18px;font-size:18px;font-weight:700;color:white;cursor:pointer;width:100%}
-    .primary{background:var(--accent)} .ok{background:var(--ok)} .bad{background:var(--bad)} .ghost{background:#334155}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    .center{text-align:center}.setno{color:var(--muted);font-weight:700}.reps{font-size:36px;font-weight:800;margin-top:8px}.weight{font-size:64px;font-weight:900;line-height:1;margin:8px 0 14px}
-    .timer{font-variant-numeric:tabular-nums;font-size:56px;font-weight:900;margin:8px 0}.small{font-size:14px;color:var(--muted)}
-    .sets{display:grid;gap:8px}.row{display:grid;grid-template-columns:54px 1fr 86px;gap:8px;align-items:center;padding:10px 12px;border-radius:12px;background:#0f172a;border:1px solid #263244}
-    .row.done{background:rgba(22,163,74,.2);border-color:#16a34a}.row.fail{background:rgba(220,38,38,.2);border-color:#dc2626}.row.active{outline:2px solid #60a5fa}
-    .pill{font-weight:800}.status{text-align:right}.hidden{display:none!important}
-    .history-item{padding:10px 0;border-bottom:1px solid #263244}.history-item:last-child{border-bottom:0}
-    .topline{display:flex;justify-content:space-between;gap:12px;align-items:center}.badge{background:#1e293b;padding:7px 10px;border-radius:999px;color:#cbd5e1;font-size:13px}
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<title>Bulgaren</title>
+<style>
+:root{--bg:#07101f;--card:#111827;--card2:#0f172a;--line:#263244;--text:#f8fafc;--muted:#94a3b8;--blue:#2563eb;--green:#16a34a;--red:#dc2626;--amber:#d97706}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#07101f,#0f172a);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;min-height:100vh}
+.wrap{max-width:620px;margin:auto;padding:14px 14px 92px}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 2px 14px}
+h1{font-size:30px;margin:0}.muted,.small{color:var(--muted)}.small{font-size:13px}
+.card{background:rgba(17,24,39,.97);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:13px;box-shadow:0 10px 28px rgba(0,0,0,.22)}
+.center{text-align:center}.hidden{display:none!important}
+label{display:block;color:var(--muted);font-size:13px;margin:0 0 6px}
+input,select{width:100%;background:#0b1323;color:white;border:1px solid #334155;border-radius:12px;padding:12px;font-size:18px}
+button{border:0;border-radius:13px;padding:14px 16px;font-weight:800;font-size:16px;color:#fff;cursor:pointer}
+button:disabled{opacity:.5;cursor:not-allowed}.full{width:100%}.primary{background:var(--blue)}.ok{background:var(--green)}.bad{background:var(--red)}.ghost{background:#334155}.warn{background:var(--amber)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:9px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.metric{background:#0b1323;border:1px solid #263244;border-radius:14px;padding:12px}.metric b{display:block;font-size:24px;margin-top:3px}
+.setno{font-weight:800;color:var(--muted);letter-spacing:.05em}.reps{font-size:34px;font-weight:900;margin:8px 0 0}.weight{font-size:64px;font-weight:950;line-height:1;margin:6px 0}
+.plates{background:#0b1323;border:1px solid #263244;border-radius:14px;padding:11px;margin:12px 0;color:#dbeafe}
+.timer{font-size:60px;font-weight:950;font-variant-numeric:tabular-nums;margin:4px 0}
+.progress{height:8px;background:#263244;border-radius:999px;overflow:hidden;margin:10px 0}.progress>div{height:100%;background:#60a5fa;width:0}
+.sets{display:grid;gap:7px}.setrow{display:grid;grid-template-columns:46px 1fr 34px;align-items:center;gap:8px;background:#0b1323;border:1px solid #263244;padding:9px 10px;border-radius:11px}
+.setrow.active{outline:2px solid #60a5fa}.setrow.done{background:rgba(22,163,74,.18);border-color:#16a34a}.setrow.fail{background:rgba(220,38,38,.18);border-color:#dc2626}
+.nav{position:fixed;bottom:0;left:0;right:0;background:rgba(7,16,31,.96);backdrop-filter:blur(10px);border-top:1px solid #263244;display:flex;justify-content:center;z-index:20}
+.navinner{width:min(620px,100%);display:grid;grid-template-columns:repeat(4,1fr);padding:7px}
+.nav button{background:transparent;color:#94a3b8;padding:9px 4px;font-size:12px}.nav button.active{color:white;background:#1e293b}.nav span{display:block;font-size:20px;margin-bottom:2px}
+.historyItem,.milestone{border-bottom:1px solid #263244;padding:11px 0}.historyItem:last-child,.milestone:last-child{border-bottom:0}
+.historyHead{display:flex;justify-content:space-between;gap:10px;align-items:center}.tag{padding:4px 8px;border-radius:999px;font-size:12px;font-weight:800}.tag.ok{background:rgba(22,163,74,.22);color:#86efac}.tag.bad{background:rgba(220,38,38,.22);color:#fca5a5}
+.details{margin-top:10px;padding:10px;background:#0b1323;border-radius:10px}.miniSets{display:grid;grid-template-columns:repeat(8,1fr);gap:4px}.mini{aspect-ratio:1;border-radius:7px;display:grid;place-items:center;font-size:11px;font-weight:900;background:#334155}.mini.ok{background:#166534}.mini.bad{background:#991b1b}
+canvas{width:100%;height:230px;background:#0b1323;border-radius:12px}
+.row{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:9px 0}.switch{width:auto}
+hr{border:0;border-top:1px solid #263244;margin:14px 0}
+.toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);background:#111827;border:1px solid #475569;padding:10px 14px;border-radius:12px;z-index:30;display:none}
+@media(max-width:430px){.weight{font-size:56px}.timer{font-size:52px}.grid3{grid-template-columns:1fr}.metric b{font-size:21px}}
+</style>
 </head>
 <body>
 <div class="wrap">
-  <div class="topline">
-    <div><h1>Bulgaren</h1><div class="sub">8 set. Klarar du alla höjs maxvikten 2,5 kg.</div></div>
-    <div class="badge">PWA</div>
+<header><div><h1>Bulgaren</h1><div class="small">Träning, progression och statistik</div></div><div class="small">v3</div></header>
+
+<section id="view-home" class="view">
+  <div class="card">
+    <label>Aktuell maxvikt (kg)</label>
+    <input id="maxWeight" type="number" min="2.5" step="2.5" inputmode="decimal">
+    <div class="small" style="margin:8px 0 12px">Arbetsvikter avrundas till ditt valda viktsteg.</div>
+    <button id="startBtn" class="primary full">Starta pass</button>
+  </div>
+  <div class="card">
+    <div class="grid3">
+      <div class="metric"><span class="small">Nuvarande max</span><b id="homeCurrent">–</b></div>
+      <div class="metric"><span class="small">Högsta klarade</span><b id="homeBest">–</b></div>
+      <div class="metric"><span class="small">Genomförda pass</span><b id="homeSessions">0</b></div>
+    </div>
+  </div>
+  <div class="card"><b>Programmet</b><div id="previewSets" class="sets" style="margin-top:10px"></div></div>
+</section>
+
+<section id="view-workout" class="view hidden">
+  <div class="card center">
+    <div id="setNo" class="setno"></div>
+    <div id="reps" class="reps"></div>
+    <div id="weight" class="weight"></div>
+    <div id="plateText" class="plates"></div>
+    <div class="grid2">
+      <button id="successBtn" class="ok">✓ KLARADE</button>
+      <button id="failBtn" class="bad">✕ KLARADE INTE</button>
+    </div>
+    <button id="undoBtn" class="ghost full hidden" style="margin-top:9px">↩ Ångra senaste set</button>
   </div>
 
-  <section id="setup" class="card">
-    <label for="maxWeight">Aktuell maxvikt (kg)</label>
-    <input id="maxWeight" type="number" inputmode="decimal" min="2.5" step="2.5" placeholder="100" />
-    <p class="small">Arbetsvikterna avrundas till närmaste 2,5 kg.</p>
-    <button id="startBtn" class="primary">Starta pass</button>
-  </section>
+  <div id="restCard" class="card center hidden">
+    <div class="small">VILA</div>
+    <div id="timer" class="timer">04:00</div>
+    <div class="progress"><div id="timerProgress"></div></div>
+    <div id="nextSetText" class="plates"></div>
+    <button id="skipBtn" class="ghost full">Hoppa över vila</button>
+  </div>
 
-  <section id="workout" class="hidden">
-    <div class="card center">
-      <div id="setNo" class="setno">SET 1 AV 8</div>
-      <div id="reps" class="reps">8 REPS</div>
-      <div id="weight" class="weight">60 KG</div>
-      <div class="grid">
-        <button id="successBtn" class="ok">✓ KLARADE</button>
-        <button id="failBtn" class="bad">✕ KLARADE INTE</button>
-      </div>
+  <div class="card"><div id="setList" class="sets"></div></div>
+</section>
+
+<section id="view-stats" class="view hidden">
+  <div class="card">
+    <div class="grid3">
+      <div class="metric"><span class="small">Startvikt</span><b id="statStart">–</b></div>
+      <div class="metric"><span class="small">Total ökning</span><b id="statGain">–</b></div>
+      <div class="metric"><span class="small">Godkända pass</span><b id="statPassed">0</b></div>
     </div>
+  </div>
+  <div class="card"><h3>Utveckling</h3><canvas id="chart" width="560" height="230"></canvas><div class="small">Visar maxvikten som användes vid varje genomfört pass.</div></div>
+  <div class="card"><h3>Milstolpar</h3><div id="milestones"></div></div>
+</section>
 
-    <div id="restCard" class="card center hidden">
-      <div class="small">VILA</div>
-      <div id="timer" class="timer">04:00</div>
-      <div id="nextSetText" class="small"></div>
-      <button id="skipBtn" class="ghost" style="margin-top:12px">Hoppa över vila</button>
-    </div>
+<section id="view-history" class="view hidden">
+  <div class="card"><h3>Träningshistorik</h3><div id="history"></div></div>
+</section>
 
-    <div class="card">
-      <div id="setList" class="sets"></div>
-    </div>
-  </section>
-
-  <section id="summary" class="card hidden center">
-    <h2 id="summaryTitle"></h2>
-    <p id="summaryText"></p>
-    <button id="newWorkoutBtn" class="primary">Till startsidan</button>
-  </section>
-
-  <section class="card">
-    <h3 style="margin-top:0">Historik</h3>
-    <div id="history" class="small">Ingen historik ännu.</div>
-  </section>
+<section id="view-settings" class="view hidden">
+  <div class="card">
+    <h3>Passinställningar</h3>
+    <label>Vilotid (sekunder)</label><input id="restSeconds" type="number" min="30" step="15">
+    <br><label>Viktsteg (kg)</label><select id="weightStep"><option>1.25</option><option selected>2.5</option><option>5</option></select>
+    <br><label>Stångvikt (kg)</label><input id="barWeight" type="number" min="0" step="0.5">
+    <br><label>Tillgängliga viktskivor per sida, kg (kommaseparerat)</label><input id="plates" type="text" placeholder="25,20,15,10,5,2.5,1.25">
+  </div>
+  <div class="card">
+    <h3>Signal & skärm</h3>
+    <div class="row"><span>Ljudsignaler</span><input id="soundEnabled" class="switch" type="checkbox"></div>
+    <div class="row"><span>Vibration</span><input id="vibrationEnabled" class="switch" type="checkbox"></div>
+    <div class="row"><span>Försök hålla skärmen vaken under pass</span><input id="wakeLockEnabled" class="switch" type="checkbox"></div>
+  </div>
+  <div class="card">
+    <h3>Backup</h3>
+    <button id="exportBtn" class="primary full">Exportera träningsdata</button>
+    <label style="margin-top:12px">Importera tidigare backup</label>
+    <input id="importFile" type="file" accept="application/json">
+    <div class="small" style="margin-top:8px">Import ersätter nuvarande historik och inställningar med innehållet i backupfilen.</div>
+  </div>
+  <button id="saveSettingsBtn" class="ok full">Spara inställningar</button>
+</section>
 </div>
 
+<div class="nav"><div class="navinner">
+<button data-view="home" class="active"><span>🏠</span>Start</button>
+<button data-view="stats"><span>📊</span>Statistik</button>
+<button data-view="history"><span>📅</span>Historik</button>
+<button data-view="settings"><span>⚙️</span>Inställningar</button>
+</div></div>
+<div id="toast" class="toast"></div>
+
 <script>
-const program = [
-  {reps:8,pct:60},{reps:1,pct:95},{reps:7,pct:65},{reps:2,pct:90},
-  {reps:6,pct:70},{reps:3,pct:85},{reps:5,pct:75},{reps:4,pct:80}
-];
-const round25 = v => Math.round(v / 2.5) * 2.5;
-const fmt = v => Number.isInteger(v) ? String(v) : v.toFixed(1).replace('.', ',');
-let state = {max:0, idx:0, results:Array(8).fill(null), timer:null, remaining:240};
+const PROGRAM=[{reps:8,pct:60},{reps:1,pct:95},{reps:7,pct:65},{reps:2,pct:90},{reps:6,pct:70},{reps:3,pct:85},{reps:5,pct:75},{reps:4,pct:80}];
+const DEFAULT_SETTINGS={restSeconds:240,weightStep:2.5,barWeight:20,plates:[25,20,15,10,5,2.5,1.25],soundEnabled:true,vibrationEnabled:true,wakeLockEnabled:true};
+const $=id=>document.getElementById(id);
+let settings=loadSettings();
+let state={max:0,idx:0,results:Array(8).fill(null),timer:null,restEndsAt:null,beep30Played:false,endBeepsPlayed:false,lastMarkedIndex:null,wakeLock:null};
 
-const $ = id => document.getElementById(id);
-const setup=$('setup'), workout=$('workout'), summary=$('summary'), restCard=$('restCard');
-const successBtn=$('successBtn'), failBtn=$('failBtn');
-
+function loadSettings(){try{return {...DEFAULT_SETTINGS,...JSON.parse(localStorage.getItem('bulgarenSettings')||'{}')}}catch{return {...DEFAULT_SETTINGS}}}
+function saveSettings(){localStorage.setItem('bulgarenSettings',JSON.stringify(settings))}
+function history(){try{return JSON.parse(localStorage.getItem('bulgarenHistory')||'[]')}catch{return []}}
+function setHistory(h){localStorage.setItem('bulgarenHistory',JSON.stringify(h))}
+function fmt(v){if(v===null||v===undefined||Number.isNaN(v))return'–';return Number.isInteger(v)?String(v):Number(v).toFixed(2).replace(/0+$/,'').replace(/\.$/,'').replace('.',',')}
+function roundStep(v){return Math.round(v/settings.weightStep)*settings.weightStep}
+function currentWeight(i){return roundStep(state.max*PROGRAM[i].pct/100)}
+function toast(msg){const t=$('toast');t.textContent=msg;t.style.display='block';setTimeout(()=>t.style.display='none',1800)}
 function beep(times=1){
-  try{
-    const ctx = new (window.AudioContext||window.webkitAudioContext)();
-    let t=ctx.currentTime;
-    for(let i=0;i<times;i++){
-      const o=ctx.createOscillator(), g=ctx.createGain();
-      o.frequency.value=880; g.gain.value=.08; o.connect(g); g.connect(ctx.destination);
-      o.start(t); o.stop(t+.16); t += .28;
-    }
-  }catch(e){}
+ if(!settings.soundEnabled)return;
+ try{const ctx=new(window.AudioContext||window.webkitAudioContext)();let t=ctx.currentTime;
+ for(let i=0;i<times;i++){const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.value=900;g.gain.value=.12;o.connect(g);g.connect(ctx.destination);o.start(t);o.stop(t+.18);t+=.32}}
+ catch(e){}
 }
-function currentWeight(i){ return round25(state.max * program[i].pct / 100); }
+function vibrate(pattern){if(settings.vibrationEnabled&&navigator.vibrate)navigator.vibrate(pattern)}
+function getCurrentMax(){const v=parseFloat(localStorage.getItem('bulgarenCurrentMax'));return v||null}
 
-function renderSetList(){
-  $('setList').innerHTML = program.map((s,i)=>{
-    const r=state.results[i], cls=r===true?'done':r===false?'fail':'';
-    const active=i===state.idx && r===null ? 'active':'';
-    const status=r===true?'✓':r===false?'✕':'';
-    return `<div class="row ${cls} ${active}">
-      <div class="pill">${i+1}/8</div>
-      <div>${s.reps} reps × ${fmt(currentWeight(i))} kg <span class="small">(${s.pct}%)</span></div>
-      <div class="status">${status}</div>
-    </div>`;
-  }).join('');
+function platePlan(total){
+ const perSide=(total-settings.barWeight)/2;
+ if(perSide<0)return `Målvikten är lägre än stångvikten ${fmt(settings.barWeight)} kg.`;
+ let rem=Math.round(perSide*100)/100, used=[];
+ const available=[...settings.plates].sort((a,b)=>b-a);
+ for(const p of available){while(rem+1e-9>=p){used.push(p);rem=Math.round((rem-p)*100)/100}}
+ if(rem>0.01)return `${fmt(settings.barWeight)} kg stång · ${fmt(perSide)} kg per sida (kan inte exakt byggas med valda skivor)`;
+ return `${fmt(settings.barWeight)} kg stång + ${used.length?used.map(fmt).join(' + '):'inga skivor'} kg per sida`;
+}
+
+function showView(name){
+ if(name==='workout')return;
+ document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));
+ $(`view-${name}`).classList.remove('hidden');
+ document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===name));
+ if(name==='home')renderHome();
+ if(name==='stats')renderStats();
+ if(name==='history')renderHistory();
+ if(name==='settings')renderSettings();
+}
+document.querySelectorAll('.nav button').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.view)));
+
+function renderHome(){
+ const h=history(), current=getCurrentMax();
+ $('maxWeight').value=current||'';
+ $('homeCurrent').textContent=current?`${fmt(current)} kg`:'–';
+ const passed=h.filter(x=>x.passed);
+ $('homeBest').textContent=passed.length?`${fmt(Math.max(...passed.map(x=>x.max)))} kg`:'–';
+ $('homeSessions').textContent=h.length;
+ const base=current||100;
+ $('previewSets').innerHTML=PROGRAM.map((s,i)=>`<div class="setrow"><b>${i+1}/8</b><span>${s.reps} reps × ${fmt(roundStep(base*s.pct/100))} kg <span class="small">(${s.pct}%)</span></span><span></span></div>`).join('');
+}
+
+async function requestWakeLock(){
+ if(!settings.wakeLockEnabled||!('wakeLock'in navigator))return;
+ try{state.wakeLock=await navigator.wakeLock.request('screen')}catch(e){}
+}
+async function releaseWakeLock(){try{if(state.wakeLock)await state.wakeLock.release()}catch(e){}state.wakeLock=null}
+
+function startWorkout(){
+ const val=parseFloat(String($('maxWeight').value).replace(',','.'));
+ if(!val||val<=0){toast('Ange en giltig maxvikt');return}
+ state={max:roundStep(val),idx:0,results:Array(8).fill(null),timer:null,restEndsAt:null,beep30Played:false,endBeepsPlayed:false,lastMarkedIndex:null,wakeLock:null};
+ localStorage.setItem('bulgarenCurrentMax',state.max);
+ document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));
+ $('view-workout').classList.remove('hidden');
+ document.querySelector('.nav').classList.add('hidden');
+ $('restCard').classList.add('hidden');$('successBtn').disabled=false;$('failBtn').disabled=false;$('undoBtn').classList.add('hidden');
+ renderCurrent();requestWakeLock();
 }
 function renderCurrent(){
-  if(state.idx>=8) return finishWorkout();
-  const s=program[state.idx];
-  $('setNo').textContent=`SET ${state.idx+1} AV 8`;
-  $('reps').textContent=`${s.reps} ${s.reps===1?'REP':'REPS'}`;
-  $('weight').textContent=`${fmt(currentWeight(state.idx))} KG`;
-  renderSetList();
+ if(state.idx>=8)return finishWorkout();
+ const s=PROGRAM[state.idx];
+ $('setNo').textContent=`SET ${state.idx+1} AV 8`;
+ $('reps').textContent=`${s.reps} ${s.reps===1?'REP':'REPS'}`;
+ $('weight').textContent=`${fmt(currentWeight(state.idx))} KG`;
+ $('plateText').textContent=platePlan(currentWeight(state.idx));
+ renderSetList();
 }
-function startWorkout(){
-  const val=parseFloat(String($('maxWeight').value).replace(',','.'));
-  if(!val || val<=0){ alert('Ange en giltig maxvikt.'); return; }
-  state={max:round25(val),idx:0,results:Array(8).fill(null),timer:null,remaining:240};
-  localStorage.setItem('bulgarenCurrentMax',state.max);
-  setup.classList.add('hidden'); summary.classList.add('hidden'); workout.classList.remove('hidden');
-  restCard.classList.add('hidden'); successBtn.disabled=false; failBtn.disabled=false;
-  renderCurrent();
+function renderSetList(){
+ $('setList').innerHTML=PROGRAM.map((s,i)=>{
+  const r=state.results[i], cls=r===true?'done':r===false?'fail':'', active=i===state.idx&&r===null?'active':'';
+  return `<div class="setrow ${cls} ${active}"><b>${i+1}/8</b><span>${s.reps} reps × ${fmt(currentWeight(i))} kg <span class="small">(${s.pct}%)</span></span><b>${r===true?'✓':r===false?'✕':''}</b></div>`;
+ }).join('');
 }
 function markResult(ok){
-  if(state.results[state.idx]!==null) return;
-  state.results[state.idx]=ok; renderSetList();
-  successBtn.disabled=true; failBtn.disabled=true;
-  if(state.idx===7){ finishWorkout(); return; }
-  startRest();
+ if(state.results[state.idx]!==null)return;
+ state.results[state.idx]=ok;state.lastMarkedIndex=state.idx;renderSetList();
+ $('successBtn').disabled=true;$('failBtn').disabled=true;$('undoBtn').classList.remove('hidden');
+ if(state.idx===7){setTimeout(finishWorkout,250);return}
+ startRest();
 }
 function startRest(){
-  state.remaining=240; restCard.classList.remove('hidden');
-  $('nextSetText').textContent=`Nästa: ${program[state.idx+1].reps} reps × ${fmt(currentWeight(state.idx+1))} kg`;
-  updateTimer();
-  clearInterval(state.timer);
-  state.timer=setInterval(()=>{
-    state.remaining--;
-    if(state.remaining===30) beep(1);
-    if(state.remaining<=0){ clearInterval(state.timer); beep(3); nextSet(); return; }
-    updateTimer();
-  },1000);
+ state.restEndsAt=Date.now()+settings.restSeconds*1000;state.beep30Played=false;state.endBeepsPlayed=false;
+ $('restCard').classList.remove('hidden');
+ const ni=state.idx+1;
+ $('nextSetText').innerHTML=`<b>NÄSTA: ${PROGRAM[ni].reps} ${PROGRAM[ni].reps===1?'REP':'REPS'} × ${fmt(currentWeight(ni))} KG</b><br><span class="small">${platePlan(currentWeight(ni))}</span>`;
+ clearInterval(state.timer);updateTimerFromClock();state.timer=setInterval(updateTimerFromClock,250);
 }
-function updateTimer(){
-  const m=Math.floor(state.remaining/60), s=state.remaining%60;
-  $('timer').textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+function updateTimerFromClock(){
+ if(!state.restEndsAt)return;
+ const msLeft=state.restEndsAt-Date.now(), sec=Math.max(0,Math.ceil(msLeft/1000));
+ if(sec<=30&&sec>0&&!state.beep30Played){state.beep30Played=true;beep(1);vibrate(150)}
+ const m=Math.floor(sec/60),s=sec%60;$('timer').textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+ $('timerProgress').style.width=`${Math.max(0,Math.min(100,(1-sec/settings.restSeconds)*100))}%`;
+ if(msLeft<=0&&!state.endBeepsPlayed){state.endBeepsPlayed=true;clearInterval(state.timer);state.timer=null;beep(2);vibrate([180,150,180]);nextSet()}
 }
 function nextSet(){
-  clearInterval(state.timer); state.timer=null; restCard.classList.add('hidden');
-  state.idx++; successBtn.disabled=false; failBtn.disabled=false; renderCurrent();
+ clearInterval(state.timer);state.timer=null;state.restEndsAt=null;$('restCard').classList.add('hidden');
+ state.idx++;$('successBtn').disabled=false;$('failBtn').disabled=false;$('undoBtn').classList.add('hidden');renderCurrent();
+}
+function undoLast(){
+ if(state.lastMarkedIndex===null)return;
+ clearInterval(state.timer);state.timer=null;state.restEndsAt=null;$('restCard').classList.add('hidden');
+ state.idx=state.lastMarkedIndex;state.results[state.idx]=null;state.lastMarkedIndex=null;
+ $('successBtn').disabled=false;$('failBtn').disabled=false;$('undoBtn').classList.add('hidden');renderCurrent();toast('Senaste set återställt');
 }
 function finishWorkout(){
-  clearInterval(state.timer); restCard.classList.add('hidden'); workout.classList.add('hidden'); summary.classList.remove('hidden');
-  const passed=state.results.every(Boolean);
-  const nextMax=passed ? state.max+2.5 : state.max;
-  $('summaryTitle').textContent=passed?'🏆 Passet godkänt!':'Passet klart';
-  $('summaryText').textContent=passed
-    ? `Du klarade alla 8 set. Nästa maxvikt blir ${fmt(nextMax)} kg.`
-    : `Du klarade ${state.results.filter(Boolean).length} av 8 set. Maxvikten ligger kvar på ${fmt(state.max)} kg nästa gång.`;
-  localStorage.setItem('bulgarenCurrentMax',nextMax);
-  const hist=JSON.parse(localStorage.getItem('bulgarenHistory')||'[]');
-  hist.unshift({date:new Date().toISOString(),max:state.max,passed,count:state.results.filter(Boolean).length,nextMax});
-  localStorage.setItem('bulgarenHistory',JSON.stringify(hist.slice(0,50)));
-  renderHistory();
-}
-function renderHistory(){
-  const hist=JSON.parse(localStorage.getItem('bulgarenHistory')||'[]');
-  if(!hist.length){ $('history').textContent='Ingen historik ännu.'; return; }
-  $('history').innerHTML=hist.map(h=>{
-    const d=new Date(h.date).toLocaleDateString('sv-SE');
-    return `<div class="history-item"><strong>${d}</strong><br>Max: ${fmt(h.max)} kg · Resultat: ${h.count}/8 ${h.passed?'✓':'✕'} · Nästa: ${fmt(h.nextMax)} kg</div>`;
-  }).join('');
+ clearInterval(state.timer);releaseWakeLock();
+ const passed=state.results.every(x=>x===true), count=state.results.filter(Boolean).length, nextMax=passed?roundStep(state.max+settings.weightStep):state.max;
+ const h=history();
+ h.unshift({id:crypto.randomUUID?crypto.randomUUID():String(Date.now()),date:new Date().toISOString(),max:state.max,passed,count,nextMax,results:[...state.results],program:PROGRAM.map((p,i)=>({...p,weight:currentWeight(i)}))});
+ setHistory(h.slice(0,500));localStorage.setItem('bulgarenCurrentMax',nextMax);
+ document.querySelector('.nav').classList.remove('hidden');
+ showView('home');
+ toast(passed?`Godkänt! Nästa max ${fmt(nextMax)} kg`:`${count}/8. Maxvikten ligger kvar.`);
 }
 $('startBtn').addEventListener('click',startWorkout);
-successBtn.addEventListener('click',()=>markResult(true));
-failBtn.addEventListener('click',()=>markResult(false));
+$('successBtn').addEventListener('click',()=>markResult(true));
+$('failBtn').addEventListener('click',()=>markResult(false));
 $('skipBtn').addEventListener('click',nextSet);
-$('newWorkoutBtn').addEventListener('click',()=>{
-  summary.classList.add('hidden'); setup.classList.remove('hidden');
-  $('maxWeight').value=localStorage.getItem('bulgarenCurrentMax')||'';
+$('undoBtn').addEventListener('click',undoLast);
+
+function renderStats(){
+ const h=history().slice().reverse(), passed=h.filter(x=>x.passed);
+ const start=h.length?h[0].max:null, current=getCurrentMax();
+ $('statStart').textContent=start!==null?`${fmt(start)} kg`:'–';
+ $('statGain').textContent=start!==null&&current!==null?`${current-start>=0?'+':''}${fmt(current-start)} kg`:'–';
+ $('statPassed').textContent=passed.length;
+ const firstByWeight={};
+ passed.forEach(x=>{if(!firstByWeight[x.max])firstByWeight[x.max]=x.date});
+ const entries=Object.entries(firstByWeight).sort((a,b)=>Number(a[0])-Number(b[0]));
+ $('milestones').innerHTML=entries.length?entries.map(([w,d])=>`<div class="milestone"><b>${fmt(Number(w))} kg</b><div class="small">Första gången godkänd: ${new Date(d).toLocaleDateString('sv-SE')}</div></div>`).join(''):'<div class="small">Inga godkända milstolpar ännu.</div>';
+ drawChart(h);
+}
+function drawChart(h){
+ const c=$('chart'),ctx=c.getContext('2d'),W=c.width,H=c.height;ctx.clearRect(0,0,W,H);
+ if(!h.length){ctx.fillStyle='#94a3b8';ctx.font='16px system-ui';ctx.fillText('Ingen data ännu.',20,35);return}
+ const vals=h.map(x=>x.max),min=Math.min(...vals),max=Math.max(...vals),pad=32,range=Math.max(settings.weightStep,max-min);
+ ctx.strokeStyle='#334155';ctx.lineWidth=1;
+ for(let i=0;i<5;i++){const y=pad+(H-2*pad)*i/4;ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(W-pad,y);ctx.stroke()}
+ ctx.strokeStyle='#60a5fa';ctx.lineWidth=3;ctx.beginPath();
+ vals.forEach((v,i)=>{const x=pad+(W-2*pad)*(h.length===1?.5:i/(h.length-1));const y=H-pad-(H-2*pad)*(v-min)/range;i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke();
+ ctx.fillStyle='#93c5fd';vals.forEach((v,i)=>{const x=pad+(W-2*pad)*(h.length===1?.5:i/(h.length-1));const y=H-pad-(H-2*pad)*(v-min)/range;ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fill()});
+ ctx.fillStyle='#94a3b8';ctx.font='12px system-ui';ctx.fillText(`${fmt(max)} kg`,3,pad+4);ctx.fillText(`${fmt(min)} kg`,3,H-pad+4);
+}
+
+function renderHistory(){
+ const h=history();
+ $('history').innerHTML=h.length?h.map((x,i)=>{
+  const date=new Date(x.date).toLocaleString('sv-SE',{dateStyle:'medium',timeStyle:'short'});
+  const results=x.results||Array(8).fill(null);
+  return `<div class="historyItem">
+    <div class="historyHead"><div><b>${date}</b><div class="small">Max ${fmt(x.max)} kg · ${x.count}/8 set</div></div><span class="tag ${x.passed?'ok':'bad'}">${x.passed?'GODKÄND':'EJ GODKÄND'}</span></div>
+    <button class="ghost full" style="margin-top:9px;padding:9px" onclick="toggleDetails('d${i}')">Visa detaljer</button>
+    <div id="d${i}" class="details hidden"><div class="miniSets">${results.map((r,j)=>`<div class="mini ${r===true?'ok':r===false?'bad':''}">${j+1}</div>`).join('')}</div>
+    <div class="small" style="margin-top:9px">${(x.program||[]).map((p,j)=>`${j+1}: ${p.reps}×${fmt(p.weight)} kg ${results[j]===true?'✓':results[j]===false?'✕':'–'}`).join(' · ')}</div></div>
+  </div>`;
+ }).join(''):'<div class="small">Ingen historik ännu.</div>';
+}
+window.toggleDetails=id=>$(id).classList.toggle('hidden');
+
+function renderSettings(){
+ $('restSeconds').value=settings.restSeconds;$('weightStep').value=String(settings.weightStep);$('barWeight').value=settings.barWeight;$('plates').value=settings.plates.join(',');
+ $('soundEnabled').checked=settings.soundEnabled;$('vibrationEnabled').checked=settings.vibrationEnabled;$('wakeLockEnabled').checked=settings.wakeLockEnabled;
+}
+$('saveSettingsBtn').addEventListener('click',()=>{
+ const plateVals=$('plates').value.split(',').map(x=>parseFloat(x.trim().replace(',','.'))).filter(x=>x>0);
+ settings={restSeconds:Math.max(30,parseInt($('restSeconds').value)||240),weightStep:parseFloat($('weightStep').value)||2.5,barWeight:Math.max(0,parseFloat($('barWeight').value)||20),plates:plateVals.length?plateVals:DEFAULT_SETTINGS.plates,soundEnabled:$('soundEnabled').checked,vibrationEnabled:$('vibrationEnabled').checked,wakeLockEnabled:$('wakeLockEnabled').checked};
+ saveSettings();const cur=getCurrentMax();if(cur)localStorage.setItem('bulgarenCurrentMax',roundStep(cur));toast('Inställningarna sparades');renderHome();
 });
-window.addEventListener('load',()=>{
-  $('maxWeight').value=localStorage.getItem('bulgarenCurrentMax')||'';
-  renderHistory();
-  if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
+$('exportBtn').addEventListener('click',()=>{
+ const data={app:'Bulgaren',version:3,exportedAt:new Date().toISOString(),currentMax:getCurrentMax(),settings,history:history()};
+ const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=url;a.download=`bulgaren-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(url);
 });
+$('importFile').addEventListener('change',async e=>{
+ const f=e.target.files[0];if(!f)return;
+ try{const data=JSON.parse(await f.text());if(!Array.isArray(data.history))throw new Error();
+ if(!confirm('Importen ersätter nuvarande träningshistorik och inställningar. Fortsätta?'))return;
+ setHistory(data.history);if(data.currentMax)localStorage.setItem('bulgarenCurrentMax',data.currentMax);if(data.settings){settings={...DEFAULT_SETTINGS,...data.settings};saveSettings()}
+ renderSettings();renderHome();toast('Backup importerad');}
+ catch{alert('Kunde inte läsa backupfilen.')}
+});
+
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&state.restEndsAt)updateTimerFromClock();if(!document.hidden&&$('view-workout')&&!$('view-workout').classList.contains('hidden'))requestWakeLock()});
+window.addEventListener('focus',()=>{if(state.restEndsAt)updateTimerFromClock()});
+window.addEventListener('load',()=>{renderHome();if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js')});
 </script>
 </body>
 </html>
