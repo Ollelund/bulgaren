@@ -59,6 +59,10 @@ hr{border:0;border-top:1px solid #263244;margin:14px 0}
       <span style="display:block;font-size:22px">Bulgaren</span>
       <span class="small" style="color:#dbeafe">8 set med procentbaserad progression och automatisk höjning.</span>
     </button>
+    <button id="openTricepsBtn" class="ok full" style="text-align:left;padding:18px;margin-top:10px">
+      <span style="display:block;font-size:22px">Triceps 5×10</span>
+      <span class="small" style="color:#dcfce7">5 set × 10 reps med fast arbetsvikt och egen progression.</span>
+    </button>
   </div>
   <div class="card">
     <h3>Översikt</h3>
@@ -119,6 +123,89 @@ hr{border:0;border-top:1px solid #263244;margin:14px 0}
   </div>
 
   <div class="card"><div id="setList" class="sets"></div></div>
+</section>
+
+
+<section id="view-triceps" class="view hidden">
+  <button id="backFromTricepsBtn" class="ghost full" style="margin-bottom:12px">← Till programöversikten</button>
+  <div class="card">
+    <h2 style="margin-top:0">Triceps 5×10</h2>
+    <label>Aktuell arbetsvikt (kg)</label>
+    <input id="tricepsWeight" type="number" min="1" step="0.5" inputmode="decimal">
+    <div class="small" style="margin:8px 0 12px">Klarar du alla 5 set höjs vikten enligt programmets viktsteg.</div>
+    <button id="startTricepsBtn" class="ok full">Starta Triceps 5×10</button>
+  </div>
+  <div class="card">
+    <div class="grid3">
+      <div class="metric"><span class="small">Nuvarande vikt</span><b id="tricepsCurrent">–</b></div>
+      <div class="metric"><span class="small">Högsta klarade</span><b id="tricepsBest">–</b></div>
+      <div class="metric"><span class="small">Genomförda pass</span><b id="tricepsSessions">0</b></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="grid2">
+      <button id="tricepsStatsBtn" class="primary">📊 Statistik</button>
+      <button id="tricepsHistoryBtn" class="ghost">📅 Historik</button>
+    </div>
+    <button id="tricepsSettingsBtn" class="ghost full" style="margin-top:9px">⚙️ Programinställningar</button>
+  </div>
+</section>
+
+<section id="view-triceps-workout" class="view hidden">
+  <div class="card center">
+    <div id="tricepsSetNo" class="setno">SET 1 AV 5</div>
+    <div class="reps">10 REPS</div>
+    <div id="tricepsWorkoutWeight" class="weight">0 KG</div>
+    <div class="grid2">
+      <button id="tricepsSuccessBtn" class="ok">✓ KLARADE</button>
+      <button id="tricepsFailBtn" class="bad">✕ KLARADE INTE</button>
+    </div>
+    <div class="grid2" style="margin-top:9px">
+      <button id="leaveTricepsBtn" class="ghost">← Lämna passet tillfälligt</button>
+      <button id="abortTricepsBtn" class="warn">Avbryt pass</button>
+    </div>
+  </div>
+  <div id="tricepsRestCard" class="card center hidden">
+    <div class="small">VILA</div>
+    <div id="tricepsTimer" class="timer">01:30</div>
+    <div class="progress"><div id="tricepsTimerProgress"></div></div>
+    <button id="skipTricepsRestBtn" class="ghost full">Hoppa över vila</button>
+  </div>
+  <div class="card"><div id="tricepsSetList" class="sets"></div></div>
+</section>
+
+<section id="view-triceps-stats" class="view hidden">
+  <button class="ghost full tricepsBackBtn" style="margin-bottom:12px">← Till Triceps 5×10</button>
+  <div class="card">
+    <div class="grid3">
+      <div class="metric"><span class="small">Startvikt</span><b id="triStatStart">–</b></div>
+      <div class="metric"><span class="small">Total ökning</span><b id="triStatGain">–</b></div>
+      <div class="metric"><span class="small">Godkända pass</span><b id="triStatPassed">0</b></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="grid2">
+      <div class="metric"><span class="small">Totalt lyft</span><b id="triStatVolume">0 kg</b></div>
+      <div class="metric"><span class="small">Senaste 12 månaderna</span><b id="triStatVolume12">0 kg</b></div>
+    </div>
+  </div>
+  <div class="card"><h3>Milstolpar</h3><div id="triMilestones"></div></div>
+</section>
+
+<section id="view-triceps-history" class="view hidden">
+  <button class="ghost full tricepsBackBtn" style="margin-bottom:12px">← Till Triceps 5×10</button>
+  <div class="card"><h3>Tricepshistorik</h3><div id="triHistory"></div></div>
+</section>
+
+<section id="view-triceps-settings" class="view hidden">
+  <button class="ghost full tricepsBackBtn" style="margin-bottom:12px">← Till Triceps 5×10</button>
+  <div class="card">
+    <h3>Triceps 5×10 – inställningar</h3>
+    <label>Vilotid (sekunder)</label><input id="triRestSeconds" type="number" min="30" step="15">
+    <br><label>Viktökning efter godkänt pass (kg)</label><input id="triIncrement" type="number" min="0.5" step="0.5">
+    <br><label>Viktsteg/avrundning (kg)</label><input id="triWeightStep" type="number" min="0.5" step="0.5">
+    <button id="saveTriSettingsBtn" class="ok full" style="margin-top:14px">Spara Triceps-inställningar</button>
+  </div>
 </section>
 
 <section id="view-stats" class="view hidden">
@@ -204,7 +291,10 @@ function saveSettings(){localStorage.setItem('bulgarenSettings',JSON.stringify(s
 function history(){try{return JSON.parse(localStorage.getItem('bulgarenHistory')||'[]')}catch{return []}}
 function setHistory(h){localStorage.setItem('bulgarenHistory',JSON.stringify(h))}
 const DATA_KEY='trainingAppDataV5';
-function defaultData(){return {version:5,programs:{bulgaren:{history:[],currentMax:null,settings:null,activeSession:null}},customPrograms:[]}}
+function defaultData(){return {version:5,programs:{
+  bulgaren:{history:[],currentMax:null,settings:null,activeSession:null},
+  triceps:{history:[],currentWeight:null,settings:{restSeconds:90,increment:2.5,weightStep:0.5},activeSession:null}
+},customPrograms:[]}}
 function getAppData(){
  try{return {...defaultData(),...JSON.parse(localStorage.getItem(DATA_KEY)||'{}')}}catch{return defaultData()}
 }
@@ -266,11 +356,16 @@ function clearActiveSession(){localStorage.removeItem('bulgarenActiveSession');s
 function updateResumeBanner(){
  const b=$('resumeBanner');if(!b)return;
  let s=null;try{s=JSON.parse(localStorage.getItem('bulgarenActiveSession')||'null')}catch{}
+ const td=getAppData().programs?.triceps?.activeSession;
  if(s&&s.active){
-  b.classList.remove('hidden');
+  b.classList.remove('hidden');b.dataset.program='bulgaren';
   const completed=(s.results||[]).filter(x=>x!==null).length;
-  $('resumeText').textContent=`Max ${fmt(s.max)} kg · ${completed}/8 set registrerade${s.restEndsAt?' · vila pågår':''}`;
- }else b.classList.add('hidden');
+  $('resumeText').textContent=`Bulgaren · Max ${fmt(s.max)} kg · ${completed}/8 set registrerade${s.restEndsAt?' · vila pågår':''}`;
+ }else if(td&&td.active){
+  b.classList.remove('hidden');b.dataset.program='triceps';
+  const completed=(td.results||[]).filter(x=>x!==null).length;
+  $('resumeText').textContent=`Triceps 5×10 · ${fmt(td.weight)} kg · ${completed}/5 set registrerade${td.restEndsAt?' · vila pågår':''}`;
+ }else {b.classList.add('hidden');b.dataset.program='';}
 }
 
 function fmt(v){if(v===null||v===undefined||Number.isNaN(v))return'–';return Number.isInteger(v)?String(v):Number(v).toFixed(2).replace(/0+$/,'').replace(/\.$/,'').replace('.',',')}
@@ -311,17 +406,129 @@ function showView(name){
 document.querySelectorAll('.nav button').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.view)));
 
 
+
+function triData(){
+ const d=getAppData();d.programs=d.programs||{};
+ d.programs.triceps=d.programs.triceps||{history:[],currentWeight:null,settings:{restSeconds:90,increment:2.5,weightStep:0.5},activeSession:null};
+ d.programs.triceps.settings={restSeconds:90,increment:2.5,weightStep:0.5,...(d.programs.triceps.settings||{})};
+ return {data:d,tri:d.programs.triceps};
+}
+function saveTri(tri,data=null){
+ const d=data||getAppData();d.programs=d.programs||{};d.programs.triceps=tri;saveAppData(d);
+}
+function triRound(v,step){return Math.round(v/step)*step}
+let triState={active:false,weight:0,idx:0,results:Array(5).fill(null),restEndsAt:null,timer:null,beep30Played:false,endBeepsPlayed:false};
+
+function renderTricepsHome(){
+ const {tri}=triData(),h=tri.history||[];
+ $('tricepsWeight').value=tri.currentWeight||'';
+ $('tricepsCurrent').textContent=tri.currentWeight?`${fmt(tri.currentWeight)} kg`:'–';
+ const passed=h.filter(x=>x.passed);
+ $('tricepsBest').textContent=passed.length?`${fmt(Math.max(...passed.map(x=>x.weight)))} kg`:'–';
+ $('tricepsSessions').textContent=h.length;
+}
+function openTriceps(){document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));$('view-triceps').classList.remove('hidden');renderTricepsHome()}
+function startTriceps(){
+ const {data,tri}=triData(),val=parseFloat(String($('tricepsWeight').value).replace(',','.'));
+ if(!val||val<=0){toast('Ange en giltig arbetsvikt');return}
+ triState={active:true,weight:triRound(val,tri.settings.weightStep),idx:0,results:Array(5).fill(null),restEndsAt:null,timer:null,beep30Played:false,endBeepsPlayed:false};
+ tri.currentWeight=triState.weight;tri.activeSession={...triState,timer:null};saveTri(tri,data);
+ document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));$('view-triceps-workout').classList.remove('hidden');
+ renderTriWorkout();
+}
+function saveTriActive(){
+ const {data,tri}=triData();
+ tri.activeSession=triState.active?{...triState,timer:null}:null;saveTri(tri,data);
+}
+function renderTriWorkout(){
+ $('tricepsSetNo').textContent=`SET ${triState.idx+1} AV 5`;
+ $('tricepsWorkoutWeight').textContent=`${fmt(triState.weight)} KG`;
+ $('tricepsSetList').innerHTML=Array.from({length:5},(_,i)=>{
+   const r=triState.results[i],cls=r===true?'done':r===false?'fail':'',active=i===triState.idx&&r===null?'active':'';
+   return `<div class="setrow ${cls} ${active}"><b>${i+1}/5</b><span>10 reps × ${fmt(triState.weight)} kg</span><b>${r===true?'✓':r===false?'✕':''}</b></div>`;
+ }).join('');
+ saveTriActive();
+}
+function triMark(ok){
+ if(triState.results[triState.idx]!==null)return;
+ triState.results[triState.idx]=ok;renderTriWorkout();
+ $('tricepsSuccessBtn').disabled=true;$('tricepsFailBtn').disabled=true;
+ if(triState.idx===4){setTimeout(finishTriceps,200);return}
+ startTriRest();
+}
+function startTriRest(){
+ const {tri}=triData();const rest=tri.settings.restSeconds;
+ triState.restEndsAt=Date.now()+rest*1000;triState.beep30Played=false;triState.endBeepsPlayed=false;
+ $('tricepsRestCard').classList.remove('hidden');saveTriActive();
+ clearInterval(triState.timer);updateTriTimer();triState.timer=setInterval(updateTriTimer,250);
+}
+function updateTriTimer(){
+ const {tri}=triData(),rest=tri.settings.restSeconds;
+ if(!triState.restEndsAt)return;
+ const ms=triState.restEndsAt-Date.now(),sec=Math.max(0,Math.ceil(ms/1000));
+ if(sec<=30&&sec>0&&!triState.beep30Played){triState.beep30Played=true;beep(1);vibrate(150);saveTriActive()}
+ $('tricepsTimer').textContent=`${String(Math.floor(sec/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`;
+ $('tricepsTimerProgress').style.width=`${Math.max(0,Math.min(100,(1-sec/rest)*100))}%`;
+ if(ms<=0&&!triState.endBeepsPlayed){triState.endBeepsPlayed=true;clearInterval(triState.timer);beep(2);vibrate([180,150,180]);nextTriSet()}
+}
+function nextTriSet(){
+ clearInterval(triState.timer);triState.timer=null;triState.restEndsAt=null;triState.idx++;
+ $('tricepsRestCard').classList.add('hidden');$('tricepsSuccessBtn').disabled=false;$('tricepsFailBtn').disabled=false;renderTriWorkout();
+}
+function finishTriceps(){
+ clearInterval(triState.timer);
+ const {data,tri}=triData(),passed=triState.results.every(Boolean),count=triState.results.filter(Boolean).length;
+ const next=passed?triRound(triState.weight+tri.settings.increment,tri.settings.weightStep):triState.weight;
+ tri.history=tri.history||[];
+ tri.history.unshift({date:new Date().toISOString(),weight:triState.weight,passed,count,nextWeight:next,results:[...triState.results],volume:count*10*triState.weight});
+ tri.currentWeight=next;tri.activeSession=null;saveTri(tri,data);
+ triState.active=false;openTriceps();toast(passed?`Godkänt! Nästa vikt ${fmt(next)} kg`:`${count}/5 set. Vikten ligger kvar.`);
+}
+function leaveTriceps(){saveTriActive();openTriceps();toast('Passet ligger kvar som pågående')}
+function abortTriceps(){if(!confirm('Avbryta Triceps-passet? Det sparas inte i historiken.'))return;clearInterval(triState.timer);const {data,tri}=triData();tri.activeSession=null;saveTri(tri,data);triState.active=false;openTriceps();toast('Passet avbröts')}
+function resumeTriceps(){
+ const {tri}=triData();if(!tri.activeSession)return;
+ triState={...tri.activeSession,timer:null};
+ document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));$('view-triceps-workout').classList.remove('hidden');
+ $('tricepsSuccessBtn').disabled=triState.results[triState.idx]!==null;$('tricepsFailBtn').disabled=triState.results[triState.idx]!==null;
+ renderTriWorkout();
+ if(triState.restEndsAt){$('tricepsRestCard').classList.remove('hidden');updateTriTimer();clearInterval(triState.timer);triState.timer=setInterval(updateTriTimer,250)}
+}
+function triVolume(x){return Number(x.volume)||((x.count||0)*10*(x.weight||0))}
+function renderTriStats(){
+ const {tri}=triData(),h=(tri.history||[]).slice().reverse(),passed=h.filter(x=>x.passed);
+ const start=h.length?h[0].weight:null,current=tri.currentWeight,total=h.reduce((s,x)=>s+triVolume(x),0);
+ const cutoff=new Date();cutoff.setMonth(cutoff.getMonth()-12);
+ $('triStatStart').textContent=start?`${fmt(start)} kg`:'–';
+ $('triStatGain').textContent=start&&current?`${current-start>=0?'+':''}${fmt(current-start)} kg`:'–';
+ $('triStatPassed').textContent=passed.length;
+ $('triStatVolume').textContent=`${fmt(Math.round(total))} kg`;
+ $('triStatVolume12').textContent=`${fmt(Math.round(h.filter(x=>new Date(x.date)>=cutoff).reduce((s,x)=>s+triVolume(x),0)))} kg`;
+ const first={};passed.forEach(x=>{if(!first[x.weight])first[x.weight]=x.date});
+ $('triMilestones').innerHTML=Object.entries(first).sort((a,b)=>Number(a[0])-Number(b[0])).map(([w,d])=>`<div class="milestone"><b>${fmt(Number(w))} kg</b><div class="small">Första gången godkänd: ${new Date(d).toLocaleDateString('sv-SE')}</div></div>`).join('')||'<div class="small">Inga godkända milstolpar ännu.</div>';
+}
+function renderTriHistory(){
+ const {tri}=triData(),h=tri.history||[];
+ $('triHistory').innerHTML=h.map(x=>`<div class="historyItem"><div class="historyHead"><div><b>${new Date(x.date).toLocaleString('sv-SE')}</b><div class="small">${fmt(x.weight)} kg · ${x.count}/5 set · ${fmt(triVolume(x))} kg volym</div></div><span class="tag ${x.passed?'ok':'bad'}">${x.passed?'GODKÄND':'EJ GODKÄND'}</span></div></div>`).join('')||'<div class="small">Ingen historik ännu.</div>';
+}
+function renderTriSettings(){
+ const {tri}=triData();$('triRestSeconds').value=tri.settings.restSeconds;$('triIncrement').value=tri.settings.increment;$('triWeightStep').value=tri.settings.weightStep;
+}
 function renderPrograms(){
  syncV5FromLegacy();
- const data=getAppData(), h=data.programs?.bulgaren?.history||[];
- const total=h.length,totalVol=h.reduce((s,x)=>s+sessionTonnage(x),0);
+ const data=getAppData(), bh=data.programs?.bulgaren?.history||[], th=data.programs?.triceps?.history||[];
+ const all=[
+   ...bh.map(x=>({...x,programName:'Bulgaren',programKey:'bulgaren',volume:sessionTonnage(x)})),
+   ...th.map(x=>({...x,programName:'Triceps 5×10',programKey:'triceps',volume:triVolume(x)}))
+ ].sort((a,b)=>new Date(b.date)-new Date(a.date));
+ const total=all.length,totalVol=all.reduce((s,x)=>s+(x.volume||0),0);
  const cutoff=Date.now()-30*24*60*60*1000;
- const days=new Set(h.filter(x=>new Date(x.date).getTime()>=cutoff).map(x=>new Date(x.date).toISOString().slice(0,10)));
+ const days=new Set(all.filter(x=>new Date(x.date).getTime()>=cutoff).map(x=>new Date(x.date).toISOString().slice(0,10)));
  $('globalSessions').textContent=total;
  $('globalVolume').textContent=`${fmt(Math.round(totalVol))} kg`;
  $('globalDays30').textContent=days.size;
- $('globalLatest').textContent=h.length?`Bulgaren · ${new Date(h[0].date).toLocaleDateString('sv-SE')} · ${h[0].count}/8 set`:'–';
- renderCalendarOverview(h);
+ $('globalLatest').textContent=all.length?`${all[0].programName} · ${new Date(all[0].date).toLocaleDateString('sv-SE')}`:'–';
+ renderCalendarOverview(all);
 }
 function renderCalendarOverview(h){
  const byDay={};
@@ -417,6 +624,27 @@ function finishWorkout(){
 }
 
 $('openBulgarenBtn').addEventListener('click',()=>showView('home'));
+
+$('openTricepsBtn').addEventListener('click',openTriceps);
+$('backFromTricepsBtn').addEventListener('click',()=>showView('programs'));
+$('startTricepsBtn').addEventListener('click',startTriceps);
+$('tricepsSuccessBtn').addEventListener('click',()=>triMark(true));
+$('tricepsFailBtn').addEventListener('click',()=>triMark(false));
+$('skipTricepsRestBtn').addEventListener('click',nextTriSet);
+$('leaveTricepsBtn').addEventListener('click',leaveTriceps);
+$('abortTricepsBtn').addEventListener('click',abortTriceps);
+$('tricepsStatsBtn').addEventListener('click',()=>{document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));$('view-triceps-stats').classList.remove('hidden');renderTriStats()});
+$('tricepsHistoryBtn').addEventListener('click',()=>{document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));$('view-triceps-history').classList.remove('hidden');renderTriHistory()});
+$('tricepsSettingsBtn').addEventListener('click',()=>{document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));$('view-triceps-settings').classList.remove('hidden');renderTriSettings()});
+document.querySelectorAll('.tricepsBackBtn').forEach(b=>b.addEventListener('click',openTriceps));
+$('saveTriSettingsBtn').addEventListener('click',()=>{
+ const {data,tri}=triData();
+ tri.settings.restSeconds=Math.max(30,parseInt($('triRestSeconds').value)||90);
+ tri.settings.increment=Math.max(.5,parseFloat($('triIncrement').value)||2.5);
+ tri.settings.weightStep=Math.max(.5,parseFloat($('triWeightStep').value)||.5);
+ saveTri(tri,data);toast('Triceps-inställningarna sparades');openTriceps();
+});
+
 $('backToProgramsBtn').addEventListener('click',()=>showView('programs'));
 $('startBtn').addEventListener('click',startWorkout);
 $('successBtn').addEventListener('click',()=>markResult(true));
@@ -446,7 +674,7 @@ function abortWorkout(){
  state={max:0,idx:0,results:Array(8).fill(null),timer:null,restEndsAt:null,beep30Played:false,endBeepsPlayed:false,lastMarkedIndex:null,wakeLock:null,active:false};
  showView('home');toast('Passet avbröts');
 }
-$('resumeBtn').addEventListener('click',resumeWorkout);
+$('resumeBtn').addEventListener('click',()=>{if($('resumeBanner').dataset.program==='triceps')resumeTriceps();else resumeWorkout()});
 $('leaveWorkoutBtn').addEventListener('click',leaveWorkoutTemporarily);
 $('abortWorkoutBtn').addEventListener('click',abortWorkout);
 
@@ -569,16 +797,23 @@ $('clearAllDataBtn').addEventListener('click',()=>{
  toast('All Bulgaren-data har raderats');
 });
 $('exportBtn').addEventListener('click',()=>{
- const data={app:'Bulgaren',version:3,exportedAt:new Date().toISOString(),currentMax:getCurrentMax(),settings,history:history()};
+ syncV5FromLegacy();
+ const data={app:'Träningsappen',version:5.1,exportedAt:new Date().toISOString(),trainingAppData:getAppData(),currentMax:getCurrentMax(),settings,history:history()};
  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
  a.href=url;a.download=`bulgaren-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(url);
 });
 $('importFile').addEventListener('change',async e=>{
  const f=e.target.files[0];if(!f)return;
- try{const data=JSON.parse(await f.text());if(!Array.isArray(data.history))throw new Error();
- if(!confirm('Importen ersätter nuvarande träningshistorik och inställningar. Fortsätta?'))return;
- setHistory(data.history);if(data.currentMax)localStorage.setItem('bulgarenCurrentMax',data.currentMax);if(data.settings){settings={...DEFAULT_SETTINGS,...data.settings};saveSettings()}
- renderSettings();renderHome();toast('Backup importerad');}
+ try{const data=JSON.parse(await f.text());
+ if(!confirm('Importen ersätter nuvarande träningsdata och inställningar. Fortsätta?'))return;
+ if(data.trainingAppData){
+   saveAppData(data.trainingAppData);syncLegacyFromV5();
+ }else{
+   if(!Array.isArray(data.history))throw new Error();
+   setHistory(data.history);if(data.currentMax)localStorage.setItem('bulgarenCurrentMax',data.currentMax);if(data.settings){settings={...DEFAULT_SETTINGS,...data.settings};saveSettings()}
+   syncV5FromLegacy();
+ }
+ settings=loadSettings();renderSettings();showView('programs');toast('Backup importerad');}
  catch{alert('Kunde inte läsa backupfilen.')}
 });
 

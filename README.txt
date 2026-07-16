@@ -17,3 +17,13 @@ Nyheter:
 
 GitHub Pages:
 Ersätt de befintliga filerna med filerna i denna version. Samma Pages-adress kan användas.
+
+V5.1:
+- Nytt fullt fungerande program: Triceps 5×10.
+- 5 set × 10 reps med fast arbetsvikt.
+- Egen progression: klarar du 5/5 höjs vikten med programmets inställda ökning.
+- Egen vilotid, viktökning och viktavrundning.
+- Separat Triceps-historik, statistik och milstolpar.
+- Pågående Triceps-pass kan lämnas, återupptas och avbrytas.
+- Global startsida summerar både Bulgaren och Triceps 5×10.
+- Backup/export omfattar nu hela v5-datamodellen.
