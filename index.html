@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0f172a">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
-<title>Bulgaren</title>
+<title>Träningsappen</title>
 <style>
 :root{--bg:#07101f;--card:#111827;--card2:#0f172a;--line:#263244;--text:#f8fafc;--muted:#94a3b8;--blue:#2563eb;--green:#16a34a;--red:#dc2626;--amber:#d97706}
 *{box-sizing:border-box}
@@ -43,7 +43,7 @@ hr{border:0;border-top:1px solid #263244;margin:14px 0}
 </head>
 <body>
 <div class="wrap">
-<header><div><h1>Bulgaren</h1><div class="small">Träning, progression och statistik</div></div><div class="small">v4</div></header>
+<header><div><h1>Träningsappen</h1><div class="small">Program, progression och statistik</div></div><div class="small">v5</div></header>
 <div id="resumeBanner" class="card hidden" style="border-color:#2563eb">
   <div class="historyHead">
     <div><b>Pågående träningspass</b><div id="resumeText" class="small"></div></div>
@@ -51,7 +51,32 @@ hr{border:0;border-top:1px solid #263244;margin:14px 0}
   </div>
 </div>
 
-<section id="view-home" class="view">
+
+<section id="view-programs" class="view">
+  <div class="card">
+    <h2 style="margin-top:0">Välj träningsprogram</h2>
+    <button id="openBulgarenBtn" class="primary full" style="text-align:left;padding:18px">
+      <span style="display:block;font-size:22px">Bulgaren</span>
+      <span class="small" style="color:#dbeafe">8 set med procentbaserad progression och automatisk höjning.</span>
+    </button>
+  </div>
+  <div class="card">
+    <h3>Översikt</h3>
+    <div class="grid3">
+      <div class="metric"><span class="small">Totalt antal pass</span><b id="globalSessions">0</b></div>
+      <div class="metric"><span class="small">Total volym</span><b id="globalVolume">0 kg</b></div>
+      <div class="metric"><span class="small">Träningsdagar 30 d</span><b id="globalDays30">0</b></div>
+    </div>
+    <div class="metric" style="margin-top:9px"><span class="small">Senaste pass</span><b id="globalLatest" style="font-size:18px">–</b></div>
+  </div>
+  <div class="card">
+    <h3>Kalenderöversikt</h3>
+    <div id="calendarOverview" class="small"></div>
+  </div>
+</section>
+
+<section id="view-home" class="view hidden">
+  <button id="backToProgramsBtn" class="ghost full" style="margin-bottom:12px">← Till programöversikten</button>
   <div class="card">
     <label>Aktuell maxvikt (kg)</label>
     <input id="maxWeight" type="number" min="2.5" step="2.5" inputmode="decimal">
@@ -133,6 +158,16 @@ hr{border:0;border-top:1px solid #263244;margin:14px 0}
     <div class="row"><span>Vibration</span><input id="vibrationEnabled" class="switch" type="checkbox"></div>
     <div class="row"><span>Försök hålla skärmen vaken under pass</span><input id="wakeLockEnabled" class="switch" type="checkbox"></div>
   </div>
+
+  <div class="card">
+    <h3>Egna program</h3>
+    <div class="small">Skapa ett enkelt procentbaserat program. Det sparas för framtida versioner och kan byggas ut vidare.</div>
+    <label style="margin-top:10px">Programnamn</label><input id="customProgramName" type="text" placeholder="Mitt program">
+    <label style="margin-top:10px">Set (en rad per set: reps,procent)</label>
+    <textarea id="customProgramSets" style="width:100%;min-height:110px;background:#0b1323;color:white;border:1px solid #334155;border-radius:12px;padding:12px" placeholder="8,60&#10;5,70&#10;3,80"></textarea>
+    <button id="saveCustomProgramBtn" class="primary full" style="margin-top:10px">Spara eget program</button>
+    <div id="customProgramList" class="small" style="margin-top:10px"></div>
+  </div>
   <div class="card">
     <h3>Backup</h3>
     <button id="exportBtn" class="primary full">Exportera träningsdata</button>
@@ -150,7 +185,7 @@ hr{border:0;border-top:1px solid #263244;margin:14px 0}
 </div>
 
 <div class="nav"><div class="navinner">
-<button data-view="home" class="active"><span>🏠</span>Start</button>
+<button data-view="programs" class="active"><span>🏠</span>Start</button>
 <button data-view="stats"><span>📊</span>Statistik</button>
 <button data-view="history"><span>📅</span>Historik</button>
 <button data-view="settings"><span>⚙️</span>Inställningar</button>
@@ -168,10 +203,56 @@ function loadSettings(){try{return {...DEFAULT_SETTINGS,...JSON.parse(localStora
 function saveSettings(){localStorage.setItem('bulgarenSettings',JSON.stringify(settings))}
 function history(){try{return JSON.parse(localStorage.getItem('bulgarenHistory')||'[]')}catch{return []}}
 function setHistory(h){localStorage.setItem('bulgarenHistory',JSON.stringify(h))}
+const DATA_KEY='trainingAppDataV5';
+function defaultData(){return {version:5,programs:{bulgaren:{history:[],currentMax:null,settings:null,activeSession:null}},customPrograms:[]}}
+function getAppData(){
+ try{return {...defaultData(),...JSON.parse(localStorage.getItem(DATA_KEY)||'{}')}}catch{return defaultData()}
+}
+function saveAppData(data){localStorage.setItem(DATA_KEY,JSON.stringify(data))}
+function migrateLegacyData(){
+ const data=getAppData();
+ const b=data.programs?.bulgaren||{};
+ let changed=false;
+ try{
+   const legacyHist=JSON.parse(localStorage.getItem('bulgarenHistory')||'[]');
+   if((!b.history||!b.history.length)&&legacyHist.length){b.history=legacyHist;changed=true}
+ }catch{}
+ const legacyMax=parseFloat(localStorage.getItem('bulgarenCurrentMax'));
+ if((b.currentMax===null||b.currentMax===undefined)&&legacyMax){b.currentMax=legacyMax;changed=true}
+ try{
+   const legacySettings=JSON.parse(localStorage.getItem('bulgarenSettings')||'null');
+   if(!b.settings&&legacySettings){b.settings=legacySettings;changed=true}
+ }catch{}
+ try{
+   const legacyActive=JSON.parse(localStorage.getItem('bulgarenActiveSession')||'null');
+   if(!b.activeSession&&legacyActive){b.activeSession=legacyActive;changed=true}
+ }catch{}
+ data.programs=data.programs||{};data.programs.bulgaren=b;
+ if(changed)saveAppData(data);
+ syncLegacyFromV5();
+}
+function syncLegacyFromV5(){
+ const data=getAppData(),b=data.programs?.bulgaren;
+ if(!b)return;
+ if(Array.isArray(b.history))localStorage.setItem('bulgarenHistory',JSON.stringify(b.history));
+ if(b.currentMax!==null&&b.currentMax!==undefined)localStorage.setItem('bulgarenCurrentMax',b.currentMax);
+ if(b.settings)localStorage.setItem('bulgarenSettings',JSON.stringify(b.settings));
+ if(b.activeSession)localStorage.setItem('bulgarenActiveSession',JSON.stringify(b.activeSession)); else localStorage.removeItem('bulgarenActiveSession');syncV5FromLegacy();
+}
+function syncV5FromLegacy(){
+ const data=getAppData();data.programs=data.programs||{};data.programs.bulgaren=data.programs.bulgaren||{};
+ const b=data.programs.bulgaren;
+ try{b.history=JSON.parse(localStorage.getItem('bulgarenHistory')||'[]')}catch{b.history=[]}
+ const m=parseFloat(localStorage.getItem('bulgarenCurrentMax'));b.currentMax=m||null;
+ try{b.settings=JSON.parse(localStorage.getItem('bulgarenSettings')||'null')}catch{}
+ try{b.activeSession=JSON.parse(localStorage.getItem('bulgarenActiveSession')||'null')}catch{}
+ saveAppData(data);
+}
+
 function saveActiveSession(){
  if(!state.active){localStorage.removeItem('bulgarenActiveSession');updateResumeBanner();return}
  const payload={max:state.max,idx:state.idx,results:state.results,restEndsAt:state.restEndsAt,beep30Played:state.beep30Played,endBeepsPlayed:state.endBeepsPlayed,lastMarkedIndex:state.lastMarkedIndex,active:true};
- localStorage.setItem('bulgarenActiveSession',JSON.stringify(payload));updateResumeBanner();
+ localStorage.setItem('bulgarenActiveSession',JSON.stringify(payload));syncV5FromLegacy();updateResumeBanner();
 }
 function loadActiveSession(){
  try{
@@ -181,7 +262,7 @@ function loadActiveSession(){
   return true;
  }catch{return false}
 }
-function clearActiveSession(){localStorage.removeItem('bulgarenActiveSession');state.active=false;updateResumeBanner()}
+function clearActiveSession(){localStorage.removeItem('bulgarenActiveSession');state.active=false;syncV5FromLegacy();updateResumeBanner()}
 function updateResumeBanner(){
  const b=$('resumeBanner');if(!b)return;
  let s=null;try{s=JSON.parse(localStorage.getItem('bulgarenActiveSession')||'null')}catch{}
@@ -221,6 +302,7 @@ function showView(name){
  $(`view-${name}`).classList.remove('hidden');
  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===name));
  updateResumeBanner();
+ if(name==='programs')renderPrograms();
  if(name==='home')renderHome();
  if(name==='stats')renderStats();
  if(name==='history')renderHistory();
@@ -228,6 +310,26 @@ function showView(name){
 }
 document.querySelectorAll('.nav button').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.view)));
 
+
+function renderPrograms(){
+ syncV5FromLegacy();
+ const data=getAppData(), h=data.programs?.bulgaren?.history||[];
+ const total=h.length,totalVol=h.reduce((s,x)=>s+sessionTonnage(x),0);
+ const cutoff=Date.now()-30*24*60*60*1000;
+ const days=new Set(h.filter(x=>new Date(x.date).getTime()>=cutoff).map(x=>new Date(x.date).toISOString().slice(0,10)));
+ $('globalSessions').textContent=total;
+ $('globalVolume').textContent=`${fmt(Math.round(totalVol))} kg`;
+ $('globalDays30').textContent=days.size;
+ $('globalLatest').textContent=h.length?`Bulgaren · ${new Date(h[0].date).toLocaleDateString('sv-SE')} · ${h[0].count}/8 set`:'–';
+ renderCalendarOverview(h);
+}
+function renderCalendarOverview(h){
+ const byDay={};
+ h.forEach(x=>{const k=new Date(x.date).toISOString().slice(0,10);byDay[k]=(byDay[k]||0)+1});
+ const now=new Date(), days=[];
+ for(let i=27;i>=0;i--){const d=new Date(now);d.setDate(now.getDate()-i);const k=d.toISOString().slice(0,10);days.push({d,k,count:byDay[k]||0})}
+ $('calendarOverview').innerHTML=`<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px">${days.map(x=>`<div title="${x.k}: ${x.count} pass" style="aspect-ratio:1;border-radius:7px;display:grid;place-items:center;background:${x.count?'#2563eb':'#1e293b'};color:${x.count?'white':'#64748b'};font-size:11px">${x.d.getDate()}</div>`).join('')}</div>`;
+}
 function renderHome(){
  const h=history(), current=getCurrentMax();
  $('maxWeight').value=current||'';
@@ -308,11 +410,14 @@ function finishWorkout(){
  const passed=state.results.every(x=>x===true), count=state.results.filter(Boolean).length, nextMax=passed?roundStep(state.max+settings.weightStep):state.max;
  const h=history();
  h.unshift({id:crypto.randomUUID?crypto.randomUUID():String(Date.now()),date:new Date().toISOString(),max:state.max,passed,count,nextMax,results:[...state.results],program:PROGRAM.map((p,i)=>({...p,weight:currentWeight(i)}))});
- setHistory(h.slice(0,500));localStorage.setItem('bulgarenCurrentMax',nextMax);
+ setHistory(h.slice(0,500));localStorage.setItem('bulgarenCurrentMax',nextMax);syncV5FromLegacy();
  clearActiveSession();
  showView('home');
  toast(passed?`Godkänt! Nästa max ${fmt(nextMax)} kg`:`${count}/8. Maxvikten ligger kvar.`);
 }
+
+$('openBulgarenBtn').addEventListener('click',()=>showView('home'));
+$('backToProgramsBtn').addEventListener('click',()=>showView('programs'));
 $('startBtn').addEventListener('click',startWorkout);
 $('successBtn').addEventListener('click',()=>markResult(true));
 $('failBtn').addEventListener('click',()=>markResult(false));
@@ -425,11 +530,24 @@ window.toggleDetails=id=>$(id).classList.toggle('hidden');
 function renderSettings(){
  $('restSeconds').value=settings.restSeconds;$('weightStep').value=String(settings.weightStep);$('barWeight').value=settings.barWeight;$('plates').value=settings.plates.join(',');
  $('soundEnabled').checked=settings.soundEnabled;$('vibrationEnabled').checked=settings.vibrationEnabled;$('wakeLockEnabled').checked=settings.wakeLockEnabled;
+ renderCustomPrograms();
 }
+
+function renderCustomPrograms(){
+ const data=getAppData(), list=data.customPrograms||[];
+ $('customProgramList').innerHTML=list.length?list.map(p=>`<div class="milestone"><b>${p.name}</b><div>${p.sets.length} set</div></div>`).join(''):'Inga egna program sparade ännu.';
+}
+$('saveCustomProgramBtn').addEventListener('click',()=>{
+ const name=$('customProgramName').value.trim();
+ const sets=$('customProgramSets').value.split('\n').map(r=>r.trim()).filter(Boolean).map(r=>{const [reps,pct]=r.split(',').map(Number);return {reps,pct}}).filter(x=>x.reps>0&&x.pct>0);
+ if(!name||!sets.length){toast('Ange namn och minst ett giltigt set');return}
+ const data=getAppData();data.customPrograms=data.customPrograms||[];data.customPrograms.push({id:String(Date.now()),name,sets,createdAt:new Date().toISOString()});saveAppData(data);
+ $('customProgramName').value='';$('customProgramSets').value='';renderCustomPrograms();toast('Eget program sparat');
+});
 $('saveSettingsBtn').addEventListener('click',()=>{
  const plateVals=$('plates').value.split(',').map(x=>parseFloat(x.trim().replace(',','.'))).filter(x=>x>0);
  settings={restSeconds:Math.max(30,parseInt($('restSeconds').value)||240),weightStep:parseFloat($('weightStep').value)||2.5,barWeight:Math.max(0,parseFloat($('barWeight').value)||20),plates:plateVals.length?plateVals:DEFAULT_SETTINGS.plates,soundEnabled:$('soundEnabled').checked,vibrationEnabled:$('vibrationEnabled').checked,wakeLockEnabled:$('wakeLockEnabled').checked};
- saveSettings();const cur=getCurrentMax();if(cur)localStorage.setItem('bulgarenCurrentMax',roundStep(cur));saveActiveSession();toast('Inställningarna sparades');renderHome();
+ saveSettings();syncV5FromLegacy();const cur=getCurrentMax();if(cur)localStorage.setItem('bulgarenCurrentMax',roundStep(cur));saveActiveSession();toast('Inställningarna sparades');renderHome();
 });
 
 $('clearAllDataBtn').addEventListener('click',()=>{
@@ -442,7 +560,7 @@ $('clearAllDataBtn').addEventListener('click',()=>{
  localStorage.removeItem('bulgarenHistory');
  localStorage.removeItem('bulgarenCurrentMax');
  localStorage.removeItem('bulgarenSettings');
- localStorage.removeItem('bulgarenActiveSession');
+ localStorage.removeItem('bulgarenActiveSession');syncV5FromLegacy();
  settings={...DEFAULT_SETTINGS};
  state={max:0,idx:0,results:Array(8).fill(null),timer:null,restEndsAt:null,beep30Played:false,endBeepsPlayed:false,lastMarkedIndex:null,wakeLock:null,active:false};
  renderSettings();
@@ -467,7 +585,11 @@ $('importFile').addEventListener('change',async e=>{
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&state.restEndsAt)updateTimerFromClock();if(!document.hidden&&$('view-workout')&&!$('view-workout').classList.contains('hidden'))requestWakeLock()});
 window.addEventListener('focus',()=>{if(state.restEndsAt)updateTimerFromClock()});
 window.addEventListener('load',()=>{
- loadActiveSession();renderHome();updateResumeBanner();
+ migrateLegacyData();
+ settings=loadSettings();
+ loadActiveSession();
+ showView('programs');
+ updateResumeBanner();
  if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js');
 });
 </script>

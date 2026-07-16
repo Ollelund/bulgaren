@@ -1,6 +1,6 @@
 {
-  "name": "Bulgaren Träningsprogram",
-  "short_name": "Bulgaren",
+  "name": "Träningsappen",
+  "short_name": "Träning",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#07101f",
