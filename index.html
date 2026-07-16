@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#111827" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icon-192.png" />
+  <title>Bulgaren</title>
+  <style>
+    :root{--bg:#0b1220;--card:#111827;--muted:#94a3b8;--text:#f8fafc;--ok:#16a34a;--bad:#dc2626;--accent:#2563eb;--line:#263244}
+    *{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:linear-gradient(180deg,#0b1220,#0f172a);color:var(--text);min-height:100vh}
+    .wrap{max-width:560px;margin:0 auto;padding:18px}
+    h1{margin:6px 0 4px;font-size:32px}.sub{color:var(--muted);margin-bottom:18px}
+    .card{background:rgba(17,24,39,.96);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:14px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    label{display:block;color:var(--muted);font-size:14px;margin-bottom:7px}
+    input{width:100%;font-size:26px;padding:14px;border-radius:12px;border:1px solid #334155;background:#0f172a;color:white}
+    button{border:0;border-radius:14px;padding:15px 18px;font-size:18px;font-weight:700;color:white;cursor:pointer;width:100%}
+    .primary{background:var(--accent)} .ok{background:var(--ok)} .bad{background:var(--bad)} .ghost{background:#334155}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .center{text-align:center}.setno{color:var(--muted);font-weight:700}.reps{font-size:36px;font-weight:800;margin-top:8px}.weight{font-size:64px;font-weight:900;line-height:1;margin:8px 0 14px}
+    .timer{font-variant-numeric:tabular-nums;font-size:56px;font-weight:900;margin:8px 0}.small{font-size:14px;color:var(--muted)}
+    .sets{display:grid;gap:8px}.row{display:grid;grid-template-columns:54px 1fr 86px;gap:8px;align-items:center;padding:10px 12px;border-radius:12px;background:#0f172a;border:1px solid #263244}
+    .row.done{background:rgba(22,163,74,.2);border-color:#16a34a}.row.fail{background:rgba(220,38,38,.2);border-color:#dc2626}.row.active{outline:2px solid #60a5fa}
+    .pill{font-weight:800}.status{text-align:right}.hidden{display:none!important}
+    .history-item{padding:10px 0;border-bottom:1px solid #263244}.history-item:last-child{border-bottom:0}
+    .topline{display:flex;justify-content:space-between;gap:12px;align-items:center}.badge{background:#1e293b;padding:7px 10px;border-radius:999px;color:#cbd5e1;font-size:13px}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topline">
+    <div><h1>Bulgaren</h1><div class="sub">8 set. Klarar du alla höjs maxvikten 2,5 kg.</div></div>
+    <div class="badge">PWA</div>
+  </div>
+
+  <section id="setup" class="card">
+    <label for="maxWeight">Aktuell maxvikt (kg)</label>
+    <input id="maxWeight" type="number" inputmode="decimal" min="2.5" step="2.5" placeholder="100" />
+    <p class="small">Arbetsvikterna avrundas till närmaste 2,5 kg.</p>
+    <button id="startBtn" class="primary">Starta pass</button>
+  </section>
+
+  <section id="workout" class="hidden">
+    <div class="card center">
+      <div id="setNo" class="setno">SET 1 AV 8</div>
+      <div id="reps" class="reps">8 REPS</div>
+      <div id="weight" class="weight">60 KG</div>
+      <div class="grid">
+        <button id="successBtn" class="ok">✓ KLARADE</button>
+        <button id="failBtn" class="bad">✕ KLARADE INTE</button>
+      </div>
+    </div>
+
+    <div id="restCard" class="card center hidden">
+      <div class="small">VILA</div>
+      <div id="timer" class="timer">04:00</div>
+      <div id="nextSetText" class="small"></div>
+      <button id="skipBtn" class="ghost" style="margin-top:12px">Hoppa över vila</button>
+    </div>
+
+    <div class="card">
+      <div id="setList" class="sets"></div>
+    </div>
+  </section>
+
+  <section id="summary" class="card hidden center">
+    <h2 id="summaryTitle"></h2>
+    <p id="summaryText"></p>
+    <button id="newWorkoutBtn" class="primary">Till startsidan</button>
+  </section>
+
+  <section class="card">
+    <h3 style="margin-top:0">Historik</h3>
+    <div id="history" class="small">Ingen historik ännu.</div>
+  </section>
+</div>
+
+<script>
+const program = [
+  {reps:8,pct:60},{reps:1,pct:95},{reps:7,pct:65},{reps:2,pct:90},
+  {reps:6,pct:70},{reps:3,pct:85},{reps:5,pct:75},{reps:4,pct:80}
+];
+const round25 = v => Math.round(v / 2.5) * 2.5;
+const fmt = v => Number.isInteger(v) ? String(v) : v.toFixed(1).replace('.', ',');
+let state = {max:0, idx:0, results:Array(8).fill(null), timer:null, remaining:240};
+
+const $ = id => document.getElementById(id);
+const setup=$('setup'), workout=$('workout'), summary=$('summary'), restCard=$('restCard');
+const successBtn=$('successBtn'), failBtn=$('failBtn');
+
+function beep(times=1){
+  try{
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    let t=ctx.currentTime;
+    for(let i=0;i<times;i++){
+      const o=ctx.createOscillator(), g=ctx.createGain();
+      o.frequency.value=880; g.gain.value=.08; o.connect(g); g.connect(ctx.destination);
+      o.start(t); o.stop(t+.16); t += .28;
+    }
+  }catch(e){}
+}
+function currentWeight(i){ return round25(state.max * program[i].pct / 100); }
+
+function renderSetList(){
+  $('setList').innerHTML = program.map((s,i)=>{
+    const r=state.results[i], cls=r===true?'done':r===false?'fail':'';
+    const active=i===state.idx && r===null ? 'active':'';
+    const status=r===true?'✓':r===false?'✕':'';
+    return `<div class="row ${cls} ${active}">
+      <div class="pill">${i+1}/8</div>
+      <div>${s.reps} reps × ${fmt(currentWeight(i))} kg <span class="small">(${s.pct}%)</span></div>
+      <div class="status">${status}</div>
+    </div>`;
+  }).join('');
+}
+function renderCurrent(){
+  if(state.idx>=8) return finishWorkout();
+  const s=program[state.idx];
+  $('setNo').textContent=`SET ${state.idx+1} AV 8`;
+  $('reps').textContent=`${s.reps} ${s.reps===1?'REP':'REPS'}`;
+  $('weight').textContent=`${fmt(currentWeight(state.idx))} KG`;
+  renderSetList();
+}
+function startWorkout(){
+  const val=parseFloat(String($('maxWeight').value).replace(',','.'));
+  if(!val || val<=0){ alert('Ange en giltig maxvikt.'); return; }
+  state={max:round25(val),idx:0,results:Array(8).fill(null),timer:null,remaining:240};
+  localStorage.setItem('bulgarenCurrentMax',state.max);
+  setup.classList.add('hidden'); summary.classList.add('hidden'); workout.classList.remove('hidden');
+  restCard.classList.add('hidden'); successBtn.disabled=false; failBtn.disabled=false;
+  renderCurrent();
+}
+function markResult(ok){
+  if(state.results[state.idx]!==null) return;
+  state.results[state.idx]=ok; renderSetList();
+  successBtn.disabled=true; failBtn.disabled=true;
+  if(state.idx===7){ finishWorkout(); return; }
+  startRest();
+}
+function startRest(){
+  state.remaining=240; restCard.classList.remove('hidden');
+  $('nextSetText').textContent=`Nästa: ${program[state.idx+1].reps} reps × ${fmt(currentWeight(state.idx+1))} kg`;
+  updateTimer();
+  clearInterval(state.timer);
+  state.timer=setInterval(()=>{
+    state.remaining--;
+    if(state.remaining===30) beep(1);
+    if(state.remaining<=0){ clearInterval(state.timer); beep(3); nextSet(); return; }
+    updateTimer();
+  },1000);
+}
+function updateTimer(){
+  const m=Math.floor(state.remaining/60), s=state.remaining%60;
+  $('timer').textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+function nextSet(){
+  clearInterval(state.timer); state.timer=null; restCard.classList.add('hidden');
+  state.idx++; successBtn.disabled=false; failBtn.disabled=false; renderCurrent();
+}
+function finishWorkout(){
+  clearInterval(state.timer); restCard.classList.add('hidden'); workout.classList.add('hidden'); summary.classList.remove('hidden');
+  const passed=state.results.every(Boolean);
+  const nextMax=passed ? state.max+2.5 : state.max;
+  $('summaryTitle').textContent=passed?'🏆 Passet godkänt!':'Passet klart';
+  $('summaryText').textContent=passed
+    ? `Du klarade alla 8 set. Nästa maxvikt blir ${fmt(nextMax)} kg.`
+    : `Du klarade ${state.results.filter(Boolean).length} av 8 set. Maxvikten ligger kvar på ${fmt(state.max)} kg nästa gång.`;
+  localStorage.setItem('bulgarenCurrentMax',nextMax);
+  const hist=JSON.parse(localStorage.getItem('bulgarenHistory')||'[]');
+  hist.unshift({date:new Date().toISOString(),max:state.max,passed,count:state.results.filter(Boolean).length,nextMax});
+  localStorage.setItem('bulgarenHistory',JSON.stringify(hist.slice(0,50)));
+  renderHistory();
+}
+function renderHistory(){
+  const hist=JSON.parse(localStorage.getItem('bulgarenHistory')||'[]');
+  if(!hist.length){ $('history').textContent='Ingen historik ännu.'; return; }
+  $('history').innerHTML=hist.map(h=>{
+    const d=new Date(h.date).toLocaleDateString('sv-SE');
+    return `<div class="history-item"><strong>${d}</strong><br>Max: ${fmt(h.max)} kg · Resultat: ${h.count}/8 ${h.passed?'✓':'✕'} · Nästa: ${fmt(h.nextMax)} kg</div>`;
+  }).join('');
+}
+$('startBtn').addEventListener('click',startWorkout);
+successBtn.addEventListener('click',()=>markResult(true));
+failBtn.addEventListener('click',()=>markResult(false));
+$('skipBtn').addEventListener('click',nextSet);
+$('newWorkoutBtn').addEventListener('click',()=>{
+  summary.classList.add('hidden'); setup.classList.remove('hidden');
+  $('maxWeight').value=localStorage.getItem('bulgarenCurrentMax')||'';
+});
+window.addEventListener('load',()=>{
+  $('maxWeight').value=localStorage.getItem('bulgarenCurrentMax')||'';
+  renderHistory();
+  if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
+});
+</script>
+</body>
+</html>
