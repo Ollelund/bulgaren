@@ -43,7 +43,7 @@ hr{border:0;border-top:1px solid #263244;margin:14px 0}
 </head>
 <body>
 <div class="wrap">
-<header><div><h1>Träningsappen</h1><div class="small">Program, progression och statistik</div></div><div class="small">v6.4.1.1</div></header>
+<header><div><h1>Träningsappen</h1><div class="small">Program, progression och statistik</div></div><div class="small">v6.5.1</div></header>
 <div id="resumeBanner" class="card hidden" style="border-color:#2563eb">
   <div class="historyHead">
     <div><b>Pågående träningspass</b><div id="resumeText" class="small"></div></div>
@@ -146,6 +146,13 @@ hr{border:0;border-top:1px solid #263244;margin:14px 0}
 
 <section id="view-settings" class="view hidden">
 <div class="card" id="cloudSyncCard">
+<div id="cloudAccountSummary" style="padding:12px 0 14px">
+  <div style="font-weight:800;margin-bottom:6px">Google-konto</div>
+  <div id="cloudGoogleEmail" class="muted">Kontrollerar…</div>
+  <div style="font-weight:800;margin-top:12px;margin-bottom:6px">Molnbackup</div>
+  <div id="cloudBackupState">Kontrollerar…</div>
+  <div id="cloudBackupTime" class="muted" style="margin-top:4px"></div>
+</div>
 <h3>☁️ Synkronisering & backup</h3>
 <div class="small">Data sparas fortfarande lokalt och säkerhetskopieras till molnet när internet finns.</div>
 <div class="grid2" style="margin-top:10px">
@@ -159,6 +166,7 @@ hr{border:0;border-top:1px solid #263244;margin:14px 0}
 <div style="height:1px;background:rgba(255,255,255,.08);margin:14px 0"></div>
 <button id="linkGoogleBtn" class="primary full">Länka till Google</button>
 <button id="loginGoogleBtn" class="primary full" style="margin-top:8px">Logga in med Google / återställ data</button>
+<button id="logoutGoogleBtn" class="full" style="margin-top:8px;background:#3b414a;color:#fff;border:1px solid #6b7280">Logga ut från den här enheten</button>
 <div id="googleLinkStatus" class="small" style="margin-top:8px">Google-konto är inte kopplat ännu.</div>
 <div id="cloudMessage" class="small" style="margin-top:8px"></div>
 </div>
@@ -275,6 +283,53 @@ async function refreshGoogleLinkStatus(){
 }
 
 
+
+function fmtCloudTime(iso){
+ if(!iso)return 'Ingen backup registrerad ännu';
+ try{return 'Senast säkerhetskopierad: '+new Intl.DateTimeFormat('sv-SE',{dateStyle:'medium',timeStyle:'short'}).format(new Date(iso))}
+ catch(e){return 'Senast säkerhetskopierad: '+iso}
+}
+async function refreshCloudAccountSummary(){
+ const emailEl=document.getElementById('cloudGoogleEmail');
+ const stateEl=document.getElementById('cloudBackupState');
+ const timeEl=document.getElementById('cloudBackupTime');
+ if(!sb){if(stateEl)stateEl.textContent='Molnbackup ej tillgänglig';return}
+ try{
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){
+   if(emailEl)emailEl.textContent='Inte inloggad';
+   if(stateEl)stateEl.textContent='Molnbackup pausad';
+   if(timeEl)timeEl.textContent=fmtCloudTime(localStorage.getItem('trainingCloudLastSync'));
+   return;
+  }
+  const {data,error}=await sb.auth.getUserIdentities();
+  if(error)throw error;
+  const google=(data?.identities||[]).find(x=>x.provider==='google');
+  const email=google?.identity_data?.email || session.user?.email || null;
+  if(emailEl)emailEl.textContent=email ? email+' ✓' : (session.user?.is_anonymous?'Inte länkat till Google':'Google-konto kopplat ✓');
+  if(stateEl)stateEl.textContent='Aktiv ✓';
+  if(timeEl)timeEl.textContent=fmtCloudTime(localStorage.getItem('trainingCloudLastSync'));
+ }catch(e){
+  if(stateEl)stateEl.textContent='Kunde inte kontrollera backupstatus';
+ }
+}
+async function logoutCurrentDevice(){
+ if(!sb)return;
+ if(!confirm('Logga ut från Google/Supabase på den här enheten? Din lokala träningsdata raderas inte.'))return;
+ try{
+  const {error}=await sb.auth.signOut({scope:'local'});
+  if(error)throw error;
+  localStorage.removeItem('trainingCloudUserId');
+  localStorage.removeItem('trainingGoogleLinkExpectedUserId');
+  localStorage.removeItem('trainingGoogleRestoreRequested');
+  cloudUser=null;
+  cStatus('Utloggad','Den lokala träningsdatan finns kvar. Logga in med Google för att aktivera molnbackup igen.');
+  await refreshCloudAccountSummary();
+ }catch(e){
+  cStatus('Utloggningsfel',e.message||'Kunde inte logga ut');
+ }
+}
+
 function showPendingRestoreSuccess(){
  try{
   const raw=localStorage.getItem('trainingRestoreSuccess');
@@ -347,7 +402,7 @@ async function completeGoogleRestoreIfRequested(){
   try{syncLegacyFromV5()}catch(e){}
   const now=new Date().toISOString();
   localStorage.setItem('trainingCloudLastSync',now);
-  cLast(now);
+  cLast(now);refreshCloudAccountSummary();
   const restoredCount=q.data?.length||0;
   localStorage.setItem('trainingRestoreSuccess',JSON.stringify({
     count:restoredCount,
@@ -480,12 +535,12 @@ async function syncCloud(show=true){
    let q=await sb.from('program_state').upsert({user_id:cloudUser.id,program_id:id,state,updated_at:new Date().toISOString()},{onConflict:'user_id,program_id'});if(q.error)throw q.error;
   }
   let q=await sb.from('user_settings').upsert({user_id:cloudUser.id,settings:typeof settings!=='undefined'?settings:{},updated_at:new Date().toISOString()},{onConflict:'user_id'});if(q.error)throw q.error;
-  let now=new Date().toISOString();localStorage.setItem('trainingCloudLastSync',now);cLast(now);cStatus('Säkerhetskopierad');if(show&&typeof toast==='function')toast('Molnbackup klar');
+  let now=new Date().toISOString();localStorage.setItem('trainingCloudLastSync',now);cLast(now);refreshCloudAccountSummary();cStatus('Säkerhetskopierad');if(show&&typeof toast==='function')toast('Molnbackup klar');
  }catch(e){console.error(e);cStatus('Synkfel',e.message||'Kunde inte synka')}finally{cloudSyncBusy=false}
 }
 window.addEventListener('online',()=>syncCloud(false));
 window.addEventListener('offline',()=>cStatus('Offline','Lokal data fungerar fortfarande.'));
-document.addEventListener('DOMContentLoaded',()=>{cEl('syncNowBtn')?.addEventListener('click',()=>syncCloud(true));cEl('verifyCloudBtn')?.addEventListener('click',inspectCloudBackup);cEl('restoreCloudBtn')?.addEventListener('click',restoreCloudBackup);cEl('linkGoogleBtn')?.addEventListener('click',linkGoogleIdentity);cEl('loginGoogleBtn')?.addEventListener('click',loginGoogleAndRestore);setTimeout(async()=>{await initCloud();await verifyIdentityAfterRedirect();await completeGoogleRestoreIfRequested()},300);showPendingRestoreSuccess()});
+document.addEventListener('DOMContentLoaded',()=>{cEl('syncNowBtn')?.addEventListener('click',()=>syncCloud(true));cEl('verifyCloudBtn')?.addEventListener('click',inspectCloudBackup);cEl('restoreCloudBtn')?.addEventListener('click',restoreCloudBackup);cEl('linkGoogleBtn')?.addEventListener('click',linkGoogleIdentity);cEl('loginGoogleBtn')?.addEventListener('click',loginGoogleAndRestore);cEl('logoutGoogleBtn')?.addEventListener('click',logoutCurrentDevice);setTimeout(async()=>{await initCloud();await verifyIdentityAfterRedirect();await completeGoogleRestoreIfRequested();await refreshCloudAccountSummary()},300);showPendingRestoreSuccess()});
 
 
 const PROGRAM=[{reps:8,pct:60},{reps:1,pct:95},{reps:7,pct:65},{reps:2,pct:90},{reps:6,pct:70},{reps:3,pct:85},{reps:5,pct:75},{reps:4,pct:80}];
