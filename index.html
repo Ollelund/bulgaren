@@ -59,10 +59,6 @@ hr{border:0;border-top:1px solid #263244;margin:14px 0}
       <span style="display:block;font-size:22px">Bulgaren</span>
       <span class="small" style="color:#dbeafe">8 set med procentbaserad progression och automatisk höjning.</span>
     </button>
-    <button id="openTricepsBtn" class="ok full" style="text-align:left;padding:18px;margin-top:10px">
-      <span style="display:block;font-size:22px">Triceps 5×10</span>
-      <span class="small" style="color:#dcfce7">5 set × 10 reps med fast arbetsvikt och egen progression.</span>
-    </button>
   </div>
   <div class="card">
     <h3>Översikt</h3>
@@ -123,89 +119,6 @@ hr{border:0;border-top:1px solid #263244;margin:14px 0}
   </div>
 
   <div class="card"><div id="setList" class="sets"></div></div>
-</section>
-
-
-<section id="view-triceps" class="view hidden">
-  <button id="backFromTricepsBtn" class="ghost full" style="margin-bottom:12px">← Till programöversikten</button>
-  <div class="card">
-    <h2 style="margin-top:0">Triceps 5×10</h2>
-    <label>Aktuell arbetsvikt (kg)</label>
-    <input id="tricepsWeight" type="number" min="1" step="0.5" inputmode="decimal">
-    <div class="small" style="margin:8px 0 12px">Klarar du alla 5 set höjs vikten enligt programmets viktsteg.</div>
-    <button id="startTricepsBtn" class="ok full">Starta Triceps 5×10</button>
-  </div>
-  <div class="card">
-    <div class="grid3">
-      <div class="metric"><span class="small">Nuvarande vikt</span><b id="tricepsCurrent">–</b></div>
-      <div class="metric"><span class="small">Högsta klarade</span><b id="tricepsBest">–</b></div>
-      <div class="metric"><span class="small">Genomförda pass</span><b id="tricepsSessions">0</b></div>
-    </div>
-  </div>
-  <div class="card">
-    <div class="grid2">
-      <button id="tricepsStatsBtn" class="primary">📊 Statistik</button>
-      <button id="tricepsHistoryBtn" class="ghost">📅 Historik</button>
-    </div>
-    <button id="tricepsSettingsBtn" class="ghost full" style="margin-top:9px">⚙️ Programinställningar</button>
-  </div>
-</section>
-
-<section id="view-triceps-workout" class="view hidden">
-  <div class="card center">
-    <div id="tricepsSetNo" class="setno">SET 1 AV 5</div>
-    <div class="reps">10 REPS</div>
-    <div id="tricepsWorkoutWeight" class="weight">0 KG</div>
-    <div class="grid2">
-      <button id="tricepsSuccessBtn" class="ok">✓ KLARADE</button>
-      <button id="tricepsFailBtn" class="bad">✕ KLARADE INTE</button>
-    </div>
-    <div class="grid2" style="margin-top:9px">
-      <button id="leaveTricepsBtn" class="ghost">← Lämna passet tillfälligt</button>
-      <button id="abortTricepsBtn" class="warn">Avbryt pass</button>
-    </div>
-  </div>
-  <div id="tricepsRestCard" class="card center hidden">
-    <div class="small">VILA</div>
-    <div id="tricepsTimer" class="timer">01:30</div>
-    <div class="progress"><div id="tricepsTimerProgress"></div></div>
-    <button id="skipTricepsRestBtn" class="ghost full">Hoppa över vila</button>
-  </div>
-  <div class="card"><div id="tricepsSetList" class="sets"></div></div>
-</section>
-
-<section id="view-triceps-stats" class="view hidden">
-  <button class="ghost full tricepsBackBtn" style="margin-bottom:12px">← Till Triceps 5×10</button>
-  <div class="card">
-    <div class="grid3">
-      <div class="metric"><span class="small">Startvikt</span><b id="triStatStart">–</b></div>
-      <div class="metric"><span class="small">Total ökning</span><b id="triStatGain">–</b></div>
-      <div class="metric"><span class="small">Godkända pass</span><b id="triStatPassed">0</b></div>
-    </div>
-  </div>
-  <div class="card">
-    <div class="grid2">
-      <div class="metric"><span class="small">Totalt lyft</span><b id="triStatVolume">0 kg</b></div>
-      <div class="metric"><span class="small">Senaste 12 månaderna</span><b id="triStatVolume12">0 kg</b></div>
-    </div>
-  </div>
-  <div class="card"><h3>Milstolpar</h3><div id="triMilestones"></div></div>
-</section>
-
-<section id="view-triceps-history" class="view hidden">
-  <button class="ghost full tricepsBackBtn" style="margin-bottom:12px">← Till Triceps 5×10</button>
-  <div class="card"><h3>Tricepshistorik</h3><div id="triHistory"></div></div>
-</section>
-
-<section id="view-triceps-settings" class="view hidden">
-  <button class="ghost full tricepsBackBtn" style="margin-bottom:12px">← Till Triceps 5×10</button>
-  <div class="card">
-    <h3>Triceps 5×10 – inställningar</h3>
-    <label>Vilotid (sekunder)</label><input id="triRestSeconds" type="number" min="30" step="15">
-    <br><label>Viktökning efter godkänt pass (kg)</label><input id="triIncrement" type="number" min="0.5" step="0.5">
-    <br><label>Viktsteg/avrundning (kg)</label><input id="triWeightStep" type="number" min="0.5" step="0.5">
-    <button id="saveTriSettingsBtn" class="ok full" style="margin-top:14px">Spara Triceps-inställningar</button>
-  </div>
 </section>
 
 <section id="view-stats" class="view hidden">
@@ -326,10 +239,9 @@ async function syncCloud(show=true){
  cloudSyncBusy=true;cStatus('Synkar…');
  try{
   try{syncV5FromLegacy()}catch(e){}
-  let d=getAppData(),b=d.programs?.bulgaren||{},t=d.programs?.triceps||{},bh=b.history||[],th=t.history||[];
+  let d=getAppData(),b=d.programs?.bulgaren||{},bh=b.history||[];
   for(let i=0;i<bh.length;i++)await cSession('bulgaren','Bulgaren',bh[i],i);
-  for(let i=0;i<th.length;i++)await cSession('triceps','Triceps 5×10',th[i],i);
-  for(const [id,state] of [['bulgaren',{currentMax:b.currentMax??null,settings:b.settings??null}],['triceps',{currentWeight:t.currentWeight??null,settings:t.settings??null}]]){
+  for(const [id,state] of [['bulgaren',{currentMax:b.currentMax??null,settings:b.settings??null}]]){
    let q=await sb.from('program_state').upsert({user_id:cloudUser.id,program_id:id,state,updated_at:new Date().toISOString()},{onConflict:'user_id,program_id'});if(q.error)throw q.error;
   }
   let q=await sb.from('user_settings').upsert({user_id:cloudUser.id,settings:typeof settings!=='undefined'?settings:{},updated_at:new Date().toISOString()},{onConflict:'user_id'});if(q.error)throw q.error;
@@ -417,7 +329,7 @@ function clearActiveSession(){localStorage.removeItem('bulgarenActiveSession');s
 function updateResumeBanner(){
  const b=$('resumeBanner');if(!b)return;
  let s=null;try{s=JSON.parse(localStorage.getItem('bulgarenActiveSession')||'null')}catch{}
- const td=getAppData().programs?.triceps?.activeSession;
+ const td=null;
  if(s&&s.active){
   b.classList.remove('hidden');b.dataset.program='bulgaren';
   const completed=(s.results||[]).filter(x=>x!==null).length;
@@ -513,7 +425,6 @@ function renderTriWorkout(){
 function triMark(ok){
  if(triState.results[triState.idx]!==null)return;
  triState.results[triState.idx]=ok;renderTriWorkout();
- $('tricepsSuccessBtn').disabled=true;$('tricepsFailBtn').disabled=true;
  if(triState.idx===4){setTimeout(finishTriceps,200);return}
  startTriRest();
 }
@@ -551,7 +462,6 @@ function resumeTriceps(){
  const {tri}=triData();if(!tri.activeSession)return;
  triState={...tri.activeSession,timer:null};
  document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));$('view-triceps-workout').classList.remove('hidden');
- $('tricepsSuccessBtn').disabled=triState.results[triState.idx]!==null;$('tricepsFailBtn').disabled=triState.results[triState.idx]!==null;
  renderTriWorkout();
  if(triState.restEndsAt){$('tricepsRestCard').classList.remove('hidden');updateTriTimer();clearInterval(triState.timer);triState.timer=setInterval(updateTriTimer,250)}
 }
@@ -577,7 +487,7 @@ function renderTriSettings(){
 }
 function renderPrograms(){
  syncV5FromLegacy();
- const data=getAppData(), bh=data.programs?.bulgaren?.history||[], th=data.programs?.triceps?.history||[];
+ const data=getAppData(), bh=data.programs?.bulgaren?.history||[], th=[];
  const all=[
    ...bh.map(x=>({...x,programName:'Bulgaren',programKey:'bulgaren',volume:sessionTonnage(x)})),
    ...th.map(x=>({...x,programName:'Triceps 5×10',programKey:'triceps',volume:triVolume(x)}))
@@ -686,25 +596,6 @@ function finishWorkout(){
 
 $('openBulgarenBtn').addEventListener('click',()=>showView('home'));
 
-$('openTricepsBtn').addEventListener('click',openTriceps);
-$('backFromTricepsBtn').addEventListener('click',()=>showView('programs'));
-$('startTricepsBtn').addEventListener('click',startTriceps);
-$('tricepsSuccessBtn').addEventListener('click',()=>triMark(true));
-$('tricepsFailBtn').addEventListener('click',()=>triMark(false));
-$('skipTricepsRestBtn').addEventListener('click',nextTriSet);
-$('leaveTricepsBtn').addEventListener('click',leaveTriceps);
-$('abortTricepsBtn').addEventListener('click',abortTriceps);
-$('tricepsStatsBtn').addEventListener('click',()=>{document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));$('view-triceps-stats').classList.remove('hidden');renderTriStats()});
-$('tricepsHistoryBtn').addEventListener('click',()=>{document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));$('view-triceps-history').classList.remove('hidden');renderTriHistory()});
-$('tricepsSettingsBtn').addEventListener('click',()=>{document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));$('view-triceps-settings').classList.remove('hidden');renderTriSettings()});
-document.querySelectorAll('.tricepsBackBtn').forEach(b=>b.addEventListener('click',openTriceps));
-$('saveTriSettingsBtn').addEventListener('click',()=>{
- const {data,tri}=triData();
- tri.settings.restSeconds=Math.max(30,parseInt($('triRestSeconds').value)||90);
- tri.settings.increment=Math.max(.5,parseFloat($('triIncrement').value)||2.5);
- tri.settings.weightStep=Math.max(.5,parseFloat($('triWeightStep').value)||.5);
- saveTri(tri,data);toast('Triceps-inställningarna sparades');openTriceps();
-});
 
 $('backToProgramsBtn').addEventListener('click',()=>showView('programs'));
 $('startBtn').addEventListener('click',startWorkout);
@@ -735,7 +626,7 @@ function abortWorkout(){
  state={max:0,idx:0,results:Array(8).fill(null),timer:null,restEndsAt:null,beep30Played:false,endBeepsPlayed:false,lastMarkedIndex:null,wakeLock:null,active:false};
  showView('home');toast('Passet avbröts');
 }
-$('resumeBtn').addEventListener('click',()=>{if($('resumeBanner').dataset.program==='triceps')resumeTriceps();else resumeWorkout()});
+$('resumeBtn').addEventListener('click',()=>{resumeWorkout()});
 $('leaveWorkoutBtn').addEventListener('click',leaveWorkoutTemporarily);
 $('abortWorkoutBtn').addEventListener('click',abortWorkout);
 

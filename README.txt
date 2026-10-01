@@ -37,3 +37,9 @@ V6 – Supabase backup
 - Synkstatus och manuell Synka nu-knapp.
 - Automatisk synk när internet återkommer.
 - Google-koppling och återställning till ny enhet kommer i nästa steg.
+
+
+V6 Bulgaren-only
+- Endast Bulgaren visas och används.
+- Triceps synkas inte längre.
+- Eventuell gammal Triceps-data raderas inte automatiskt, för säkerhets skull.
