@@ -70,7 +70,7 @@ hr{border:0;border-top:1px solid #263244;margin:14px 0}
 </div>
 
 <div class="wrap">
-<header><div><h1>Träningsappen</h1><div class="small">Program, progression och statistik</div></div><div class="small">v6.7.1</div></header>
+<header><div><h1>Träningsappen</h1><div class="small">Program, progression och statistik</div></div><div class="small">v6.7.2</div></header>
 <div id="resumeBanner" class="card hidden" style="border-color:#2563eb">
   <div class="historyHead">
     <div><b>Pågående träningspass</b><div id="resumeText" class="small"></div></div>
@@ -210,7 +210,7 @@ hr{border:0;border-top:1px solid #263244;margin:14px 0}
 <div class="metric"><span class="small">Senast synkad</span><b id="cloudLastSync">–</b></div>
 </div>
 <div id="cloudUserInfo" class="small" style="margin-top:10px">Ingen användare ännu.</div>
-<button id="syncNowBtn" class="primary full" style="margin-top:12px">Synka nu</button>
+<button id="syncNowBtn" class="primary full" style="margin-top:12px">Säkerhetskopiera nu</button>
 <button id="restoreCloudBtn" class="primary full" style="margin-top:8px">Återställ från molnet</button>
 <div style="height:1px;background:rgba(255,255,255,.08);margin:14px 0"></div>
 <button id="linkGoogleBtn" class="primary full">Länka till Google</button>
@@ -234,19 +234,7 @@ hr{border:0;border-top:1px solid #263244;margin:14px 0}
   </div>
 
   
-  <div class="card">
-    <h3>Backup</h3>
-    <label style="margin-top:12px">Importera tidigare backup</label>
-    <input id="importFile" type="file" accept="application/json">
-    <div class="small" style="margin-top:8px">Import ersätter nuvarande historik och inställningar med innehållet i backupfilen.</div>
-  </div>
-  <button id="saveSettingsBtn" class="ok full">Spara inställningar</button>
-<div class="card" style="margin-top:16px;border-color:#7f1d1d">
-    <h3 style="color:#fca5a5">Rensa all data</h3>
-    <p class="small">Raderar träningshistorik, statistik, aktuell maxvikt, inställningar och eventuellt pågående pass från den här enheten.</p>
-    <button id="clearAllDataBtn" class="danger full" style="font-size:19px;padding:17px">RADERA ALL DATA</button>
-  </div>
-</section>
+  </section>
 </div>
 
 <div class="nav"><div class="navinner">
@@ -1033,9 +1021,27 @@ function undoLast(){
  state.idx=state.lastMarkedIndex;state.results[state.idx]=null;state.lastMarkedIndex=null;
  $('successBtn').disabled=false;$('failBtn').disabled=false;$('undoBtn').classList.add('hidden');saveActiveSession();renderCurrent();toast('Senaste set återställt');
 }
+
+function playWorkoutSuccessSound(){
+ if(!settings.soundEnabled) return;
+ try{
+  const A=window.AudioContext||window.webkitAudioContext, ctx=new A();
+  const notes=[523.25,659.25,783.99,1046.5];
+  notes.forEach((freq,i)=>{
+   const o=ctx.createOscillator(), g=ctx.createGain(), t=ctx.currentTime+i*.13;
+   o.type='sine'; o.frequency.setValueAtTime(freq,t);
+   g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(.16,t+.025);
+   g.gain.exponentialRampToValueAtTime(.0001,t+.18);
+   o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t+.2);
+  });
+  setTimeout(()=>ctx.close().catch(()=>{}),1000);
+ }catch(e){}
+}
+
 function finishWorkout(){
  clearInterval(state.timer);releaseWakeLock();
  const passed=state.results.every(x=>x===true), count=state.results.filter(Boolean).length, nextMax=passed?roundStep(state.max+settings.weightStep):state.max;
+ if(passed) playWorkoutSuccessSound();
  const completedAt=new Date().toISOString();
  const session={id:crypto.randomUUID?crypto.randomUUID():String(Date.now()),date:completedAt,max:state.max,passed,count,nextMax,results:[...state.results],program:PROGRAM.map((p,i)=>({...p,weight:currentWeight(i)}))};
  const volume=workoutVolumeFromState();
@@ -1179,13 +1185,13 @@ function renderCustomPrograms(){
  $('customProgramList').innerHTML=list.length?list.map(p=>`<div class="milestone"><b>${p.name}</b><div>${p.sets.length} set</div></div>`).join(''):'Inga egna program sparade ännu.';
 }
 
-$('saveSettingsBtn').addEventListener('click',()=>{
+$('saveSettingsBtn')?.addEventListener('click',()=>{
  const plateVals=$('plates').value.split(',').map(x=>parseFloat(x.trim().replace(',','.'))).filter(x=>x>0);
  settings={restSeconds:Math.max(30,parseInt($('restSeconds').value)||240),weightStep:parseFloat($('weightStep').value)||2.5,barWeight:Math.max(0,parseFloat($('barWeight').value)||20),plates:plateVals.length?plateVals:DEFAULT_SETTINGS.plates,soundEnabled:$('soundEnabled').checked,vibrationEnabled:$('vibrationEnabled').checked,wakeLockEnabled:$('wakeLockEnabled').checked};
  saveSettings();syncV5FromLegacy();const cur=getCurrentMax();if(cur)localStorage.setItem('bulgarenCurrentMax',roundStep(cur));saveActiveSession();toast('Inställningarna sparades');renderHome();
 });
 
-$('clearAllDataBtn').addEventListener('click',()=>{
+$('clearAllDataBtn')?.addEventListener('click',()=>{
  const first=confirm('Är du säker på att du vill radera ALL data i Bulgaren? Detta raderar historik, statistik, maxvikt, inställningar och pågående pass.');
  if(!first)return;
  const second=confirm('Detta går inte att ångra om du inte har en exporterad backup. Vill du verkligen fortsätta?');
@@ -1204,7 +1210,7 @@ $('clearAllDataBtn').addEventListener('click',()=>{
  toast('All Bulgaren-data har raderats');
 });
 
-$('importFile').addEventListener('change',async e=>{
+$('importFile')?.addEventListener('change',async e=>{
  const f=e.target.files[0];if(!f)return;
  try{const data=JSON.parse(await f.text());
  if(!confirm('Importen ersätter nuvarande träningsdata och inställningar. Fortsätta?'))return;

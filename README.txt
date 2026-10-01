@@ -66,3 +66,55 @@ V6.2 Bulgaren
 - Added safe "Återställ från molnet": merges by workout UUID and never deletes local history.
 - Current max is conservatively recalculated from newest successful restored workout.
 - Old cross-user duplicates in Supabase are left untouched for now.
+
+V6.3 Bulgaren
+- Adds Google identity linking using Supabase auth.linkIdentity().
+- Redirect URL: https://ollelund.github.io/bulgaren/
+- Verifies that the user ID after OAuth is the same user ID that initiated linking.
+- Keeps internal localStorage schema/key at V5 for compatibility.
+- Does not delete or migrate workout history during Google linking.
+
+V6.4 Bulgaren
+- Adds "Logga in med Google / återställ data" for a fresh browser/device.
+- Uses Supabase signInWithOAuth for Google login.
+- After successful login, downloads the signed-in user's Bulgaren sessions and merges them locally by UUID.
+- Never deletes local workout history during restore.
+- Recalculates current max from the newest successful restored workout.
+- Keeps trainingAppDataV5 localStorage compatibility.
+
+V6.4.1
+- UX patch only for successful Google/cloud restore.
+- Persists a one-time restore-success message across the automatic reload.
+- Shows restored workout count and current max after reload.
+- Does not change training data schema, Supabase tables, UUID merge logic, or trainingAppDataV5 storage key.
+
+V6.5
+- Account panel shows linked Google email when available.
+- Clear Molnbackup Aktiv status and last backup timestamp.
+- Local-device-only sign-out using Supabase signOut({scope:'local'}).
+- Local workout data is retained on sign-out.
+- Existing Google link, cloud restore, UUID merge and trainingAppDataV5 schema remain unchanged.
+
+V6.6
+- First-run welcome/auth screen.
+- "Fortsätt med Google" uses normal OAuth sign-in: new Google identity creates a permanent user; existing Google identity signs into the existing user.
+- Existing permanent Google sessions skip welcome and automatically merge Bulgaren cloud history locally.
+- "Fortsätt utan konto" explicitly creates an anonymous Supabase user.
+- Anonymous users can later use "Länka till Google" in Settings.
+- Google/permanent users do not see the link button; they see local-device logout.
+- Signing out returns to welcome without deleting local workout data.
+- trainingAppDataV5, workout UUID merge, tables and workout model are unchanged.
+
+V6.6.1
+- Fix: initCloud no longer auto-creates an anonymous user when there is no session.
+- First-run welcome screen now controls account creation.
+- "Fortsätt utan konto" is the only first-run path that calls signInAnonymously().
+- Existing valid sessions still bypass the welcome screen.
+- trainingAppDataV5 and workout/cloud data model unchanged.
+
+V6.7
+- Workout-first Bulgaren home: current max, next goal, start button, progress summary and latest session.
+- 8-segment workout progress indicator (green passed, red failed, blue current/next).
+- Rest screen prioritizes NEXT SET weight/reps and plate loading plan so the bar can be changed during rest.
+- Dedicated workout result screen with 8-set result indicator, new/retained max, volume, date and set details.
+- Existing account/auth, cloud model, UUID logic and trainingAppDataV5 storage key are unchanged.
