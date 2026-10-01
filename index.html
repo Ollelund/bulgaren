@@ -43,7 +43,7 @@ hr{border:0;border-top:1px solid #263244;margin:14px 0}
 </head>
 <body>
 <div class="wrap">
-<header><div><h1>Träningsappen</h1><div class="small">Program, progression och statistik</div></div><div class="small">v6.3.1</div></header>
+<header><div><h1>Träningsappen</h1><div class="small">Program, progression och statistik</div></div><div class="small">v6.4.1</div></header>
 <div id="resumeBanner" class="card hidden" style="border-color:#2563eb">
   <div class="historyHead">
     <div><b>Pågående träningspass</b><div id="resumeText" class="small"></div></div>
@@ -145,6 +145,24 @@ hr{border:0;border-top:1px solid #263244;margin:14px 0}
 </section>
 
 <section id="view-settings" class="view hidden">
+<div class="card" id="cloudSyncCard">
+<h3>☁️ Synkronisering & backup</h3>
+<div class="small">Data sparas fortfarande lokalt och säkerhetskopieras till molnet när internet finns.</div>
+<div class="grid2" style="margin-top:10px">
+<div class="metric"><span class="small">Molnstatus</span><b id="cloudStatus">Startar…</b></div>
+<div class="metric"><span class="small">Senast synkad</span><b id="cloudLastSync">–</b></div>
+</div>
+<div id="cloudUserInfo" class="small" style="margin-top:10px">Ingen användare ännu.</div>
+<button id="syncNowBtn" class="primary full" style="margin-top:12px">Synka nu</button>
+<button id="verifyCloudBtn" class="primary full" style="margin-top:8px">Kontrollera backup</button>
+<button id="restoreCloudBtn" class="primary full" style="margin-top:8px">Återställ från molnet</button>
+<div style="height:1px;background:rgba(255,255,255,.08);margin:14px 0"></div>
+<button id="linkGoogleBtn" class="primary full">Länka till Google</button>
+<button id="loginGoogleBtn" class="primary full" style="margin-top:8px">Logga in med Google / återställ data</button>
+<div id="googleLinkStatus" class="small" style="margin-top:8px">Google-konto är inte kopplat ännu.</div>
+<div id="cloudMessage" class="small" style="margin-top:8px"></div>
+</div>
+
   <div class="card">
     <h3>Passinställningar</h3>
     <label>Vilotid (sekunder)</label><input id="restSeconds" type="number" min="30" step="15">
@@ -176,27 +194,12 @@ hr{border:0;border-top:1px solid #263244;margin:14px 0}
     <div class="small" style="margin-top:8px">Import ersätter nuvarande historik och inställningar med innehållet i backupfilen.</div>
   </div>
   <button id="saveSettingsBtn" class="ok full">Spara inställningar</button>
-  <div class="card" style="margin-top:16px;border-color:#7f1d1d">
+<div class="card" style="margin-top:16px;border-color:#7f1d1d">
     <h3 style="color:#fca5a5">Rensa all data</h3>
     <p class="small">Raderar träningshistorik, statistik, aktuell maxvikt, inställningar och eventuellt pågående pass från den här enheten.</p>
     <button id="clearAllDataBtn" class="danger full" style="font-size:19px;padding:17px">RADERA ALL DATA</button>
   </div>
-<div class="card" id="cloudSyncCard">
-<h3>☁️ Synkronisering & backup</h3>
-<div class="small">Data sparas fortfarande lokalt och säkerhetskopieras till molnet när internet finns.</div>
-<div class="grid2" style="margin-top:10px">
-<div class="metric"><span class="small">Molnstatus</span><b id="cloudStatus">Startar…</b></div>
-<div class="metric"><span class="small">Senast synkad</span><b id="cloudLastSync">–</b></div>
-</div>
-<div id="cloudUserInfo" class="small" style="margin-top:10px">Ingen användare ännu.</div>
-<button id="syncNowBtn" class="primary full" style="margin-top:12px">Synka nu</button>
-<button id="verifyCloudBtn" class="secondary full" style="margin-top:8px">Kontrollera backup</button>
-<button id="restoreCloudBtn" class="secondary full" style="margin-top:8px">Återställ från molnet</button>
-<div style="height:1px;background:rgba(255,255,255,.08);margin:14px 0"></div>
-<button id="linkGoogleBtn" class="secondary full">Fortsätt med Google</button>
-<div id="googleLinkStatus" class="small" style="margin-top:8px">Google-konto är inte kopplat ännu.</div>
-<div id="cloudMessage" class="small" style="margin-top:8px"></div>
-</div></section>
+</section>
 </div>
 
 <div class="nav"><div class="navinner">
@@ -266,10 +269,77 @@ async function refreshGoogleLinkStatus(){
     if(btn){btn.textContent='Google-konto kopplat ✓';btn.disabled=true}
   }else{
     if(el)el.textContent='Google-konto är inte kopplat ännu.';
-    if(btn){btn.textContent='Fortsätt med Google';btn.disabled=false}
+    if(btn){btn.textContent='Länka till Google';btn.disabled=false}
   }
  }catch(e){console.error('Google identity status',e)}
 }
+
+async function loginGoogleAndRestore(){
+ if(!sb)return;
+ try{
+  localStorage.setItem('trainingGoogleRestoreRequested','1');
+  const r=await sb.auth.signInWithOAuth({
+    provider:'google',
+    options:{redirectTo:'https://ollelund.github.io/bulgaren/'}
+  });
+  if(r.error)throw r.error;
+ }catch(e){
+  localStorage.removeItem('trainingGoogleRestoreRequested');
+  console.error('Google login',e);
+  cStatus('Google-fel',e.message||'Kunde inte starta Google-inloggning');
+ }
+}
+async function completeGoogleRestoreIfRequested(){
+ if(!sb)return;
+ if(localStorage.getItem('trainingGoogleRestoreRequested')!=='1')return;
+ try{
+  const r=await sb.auth.getSession();
+  const session=r.data?.session;
+  if(!session)return;
+  cloudUser=session.user;
+  localStorage.setItem('trainingCloudUserId',cloudUser.id);
+  localStorage.removeItem('trainingGoogleRestoreRequested');
+  await refreshGoogleLinkStatus();
+
+  const q=await sb.from('workout_sessions')
+    .select('client_id,completed_at,metadata')
+    .eq('program_id','bulgaren')
+    .order('completed_at',{ascending:true});
+  if(q.error)throw q.error;
+
+  const d=getAppData();
+  if(!d.programs)d.programs={};
+  if(!d.programs.bulgaren)d.programs.bulgaren={history:[],currentMax:null,settings:null,activeSession:null};
+  const b=d.programs.bulgaren;
+  if(!Array.isArray(b.history))b.history=[];
+  const byId=new Map(b.history.filter(Boolean).map(x=>[String(x.id||''),x]));
+  let added=0;
+  for(const row of (q.data||[])){
+    const x=(row.metadata&&typeof row.metadata==='object')?row.metadata:{};
+    if(!x.id)x.id=row.client_id;
+    if(!x.date)x.date=row.completed_at;
+    if(!x.id)continue;
+    const key=String(x.id);
+    if(byId.has(key))Object.assign(byId.get(key),x);
+    else {b.history.push(x);byId.set(key,x);added++}
+  }
+  b.history.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
+  const successful=b.history.filter(x=>x?.passed===true).sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
+  if(successful.length && Number.isFinite(Number(successful[0].nextMax))) b.currentMax=Number(successful[0].nextMax);
+
+  saveAppData(d);
+  try{syncLegacyFromV5()}catch(e){}
+  const now=new Date().toISOString();
+  localStorage.setItem('trainingCloudLastSync',now);
+  cLast(now);
+  cStatus('Återställd',`Google-inloggning klar. ${q.data?.length||0} Bulgaren-pass hittades i molnet.`);
+  setTimeout(()=>location.reload(),900);
+ }catch(e){
+  console.error('Google restore',e);
+  cStatus('Återställningsfel',e.message||'Kunde inte återställa data efter Google-inloggning');
+ }
+}
+
 async function linkGoogleIdentity(){
  if(!sb||!cloudUser){cStatus('Inte ansluten');return}
  try{
@@ -393,7 +463,7 @@ async function syncCloud(show=true){
 }
 window.addEventListener('online',()=>syncCloud(false));
 window.addEventListener('offline',()=>cStatus('Offline','Lokal data fungerar fortfarande.'));
-document.addEventListener('DOMContentLoaded',()=>{cEl('syncNowBtn')?.addEventListener('click',()=>syncCloud(true));cEl('verifyCloudBtn')?.addEventListener('click',inspectCloudBackup);cEl('restoreCloudBtn')?.addEventListener('click',restoreCloudBackup);cEl('linkGoogleBtn')?.addEventListener('click',linkGoogleIdentity);setTimeout(async()=>{await initCloud();await verifyIdentityAfterRedirect()},300)});
+document.addEventListener('DOMContentLoaded',()=>{cEl('syncNowBtn')?.addEventListener('click',()=>syncCloud(true));cEl('verifyCloudBtn')?.addEventListener('click',inspectCloudBackup);cEl('restoreCloudBtn')?.addEventListener('click',restoreCloudBackup);cEl('linkGoogleBtn')?.addEventListener('click',linkGoogleIdentity);cEl('loginGoogleBtn')?.addEventListener('click',loginGoogleAndRestore);setTimeout(async()=>{await initCloud();await verifyIdentityAfterRedirect();await completeGoogleRestoreIfRequested()},300)});
 
 
 const PROGRAM=[{reps:8,pct:60},{reps:1,pct:95},{reps:7,pct:65},{reps:2,pct:90},{reps:6,pct:70},{reps:3,pct:85},{reps:5,pct:75},{reps:4,pct:80}];
