@@ -27,3 +27,13 @@ V5.1:
 - Pågående Triceps-pass kan lämnas, återupptas och avbrytas.
 - Global startsida summerar både Bulgaren och Triceps 5×10.
 - Backup/export omfattar nu hela v5-datamodellen.
+
+
+V6 – Supabase backup
+- Lokal lagring är kvar.
+- Automatisk anonym inloggning.
+- Bulgaren och Triceps-historik säkerhetskopieras till Supabase.
+- Programstatus och inställningar säkerhetskopieras.
+- Synkstatus och manuell Synka nu-knapp.
+- Automatisk synk när internet återkommer.
+- Google-koppling och återställning till ny enhet kommer i nästa steg.

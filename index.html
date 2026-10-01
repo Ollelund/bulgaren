@@ -268,7 +268,17 @@ hr{border:0;border-top:1px solid #263244;margin:14px 0}
     <p class="small">Raderar träningshistorik, statistik, aktuell maxvikt, inställningar och eventuellt pågående pass från den här enheten.</p>
     <button id="clearAllDataBtn" class="danger full" style="font-size:19px;padding:17px">RADERA ALL DATA</button>
   </div>
-</section>
+<div class="card" id="cloudSyncCard">
+<h3>☁️ Synkronisering & backup</h3>
+<div class="small">Data sparas fortfarande lokalt och säkerhetskopieras till molnet när internet finns.</div>
+<div class="grid2" style="margin-top:10px">
+<div class="metric"><span class="small">Molnstatus</span><b id="cloudStatus">Startar…</b></div>
+<div class="metric"><span class="small">Senast synkad</span><b id="cloudLastSync">–</b></div>
+</div>
+<div id="cloudUserInfo" class="small" style="margin-top:10px">Ingen användare ännu.</div>
+<button id="syncNowBtn" class="primary full" style="margin-top:12px">Synka nu</button>
+<div id="cloudMessage" class="small" style="margin-top:8px"></div>
+</div></section>
 </div>
 
 <div class="nav"><div class="navinner">
@@ -279,7 +289,58 @@ hr{border:0;border-top:1px solid #263244;margin:14px 0}
 </div></div>
 <div id="toast" class="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+
+const SUPABASE_URL='https://qtvureuczjunsbxlbdho.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY='sb_publishable_XffodHKAVUaqNqsC28PkKA_TnmTG0mc';
+let sb=null,cloudUser=null,cloudSyncBusy=false;
+function cEl(id){return document.getElementById(id)}
+function cStatus(x,m=''){if(cEl('cloudStatus'))cEl('cloudStatus').textContent=x;if(cEl('cloudMessage'))cEl('cloudMessage').textContent=m}
+function cLast(x){if(cEl('cloudLastSync'))cEl('cloudLastSync').textContent=x?new Date(x).toLocaleString('sv-SE'):'–'}
+function cId(program,x,i){let raw=[program,x.date||'',x.weight||x.max||'',i].join('|'),h=2166136261;for(let j=0;j<raw.length;j++){h^=raw.charCodeAt(j);h=Math.imul(h,16777619)}return program+'-'+(h>>>0).toString(16)}
+async function initCloud(){
+ try{
+  if(!window.supabase)throw Error('Supabase kunde inte laddas');
+  sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true}});
+  let r=await sb.auth.getSession();if(r.error)throw r.error;
+  let session=r.data.session;
+  if(!session){r=await sb.auth.signInAnonymously();if(r.error)throw r.error;session=r.data.session}
+  cloudUser=session?.user;if(!cloudUser)throw Error('Ingen användare skapades');
+  if(cEl('cloudUserInfo'))cEl('cloudUserInfo').textContent='Anonymt konto aktivt · ID '+cloudUser.id.slice(0,8)+'…';
+  cLast(localStorage.getItem('trainingCloudLastSync'));cStatus(navigator.onLine?'Redo':'Offline');
+  if(navigator.onLine)await syncCloud(false);
+ }catch(e){console.error(e);cStatus('Lokalt läge','Molnbackup kunde inte startas. Lokal data påverkas inte.')}
+}
+function cVol(program,x){try{return Number(x.volume)||(program==='bulgaren'?Number(sessionTonnage(x)):Number(triVolume(x)))||0}catch(e){return Number(x.volume)||0}}
+async function cSession(program,name,x,i){
+ let row={user_id:cloudUser.id,client_id:cId(program,x,i),program_id:program,program_name:name,started_at:x.started_at||x.date||new Date().toISOString(),completed_at:x.date||new Date().toISOString(),completed:true,successful:typeof x.passed==='boolean'?x.passed:null,total_volume:cVol(program,x),metadata:x,updated_at:new Date().toISOString()};
+ let r=await sb.from('workout_sessions').upsert(row,{onConflict:'user_id,client_id'}).select('id').single();if(r.error)throw r.error;
+ if(Array.isArray(x.results)&&x.results.length){
+  let sets=x.results.map((v,n)=>({user_id:cloudUser.id,session_id:r.data.id,set_number:n+1,exercise_id:program,exercise_name:name,target_reps:program==='triceps'?10:null,target_weight:program==='triceps'?Number(x.weight)||null:null,actual_weight:program==='triceps'?Number(x.weight)||null:null,successful:v===null?null:!!v,metadata:{local_result:v}}));
+  let q=await sb.from('workout_sets').upsert(sets,{onConflict:'session_id,set_number'});if(q.error)throw q.error;
+ }
+}
+async function syncCloud(show=true){
+ if(cloudSyncBusy||!navigator.onLine||!sb||!cloudUser)return;
+ cloudSyncBusy=true;cStatus('Synkar…');
+ try{
+  try{syncV5FromLegacy()}catch(e){}
+  let d=getAppData(),b=d.programs?.bulgaren||{},t=d.programs?.triceps||{},bh=b.history||[],th=t.history||[];
+  for(let i=0;i<bh.length;i++)await cSession('bulgaren','Bulgaren',bh[i],i);
+  for(let i=0;i<th.length;i++)await cSession('triceps','Triceps 5×10',th[i],i);
+  for(const [id,state] of [['bulgaren',{currentMax:b.currentMax??null,settings:b.settings??null}],['triceps',{currentWeight:t.currentWeight??null,settings:t.settings??null}]]){
+   let q=await sb.from('program_state').upsert({user_id:cloudUser.id,program_id:id,state,updated_at:new Date().toISOString()},{onConflict:'user_id,program_id'});if(q.error)throw q.error;
+  }
+  let q=await sb.from('user_settings').upsert({user_id:cloudUser.id,settings:typeof settings!=='undefined'?settings:{},updated_at:new Date().toISOString()},{onConflict:'user_id'});if(q.error)throw q.error;
+  let now=new Date().toISOString();localStorage.setItem('trainingCloudLastSync',now);cLast(now);cStatus('Säkerhetskopierad');if(show&&typeof toast==='function')toast('Molnbackup klar');
+ }catch(e){console.error(e);cStatus('Synkfel',e.message||'Kunde inte synka')}finally{cloudSyncBusy=false}
+}
+window.addEventListener('online',()=>syncCloud(false));
+window.addEventListener('offline',()=>cStatus('Offline','Lokal data fungerar fortfarande.'));
+document.addEventListener('DOMContentLoaded',()=>{cEl('syncNowBtn')?.addEventListener('click',()=>syncCloud(true));setTimeout(initCloud,300)});
+
+
 const PROGRAM=[{reps:8,pct:60},{reps:1,pct:95},{reps:7,pct:65},{reps:2,pct:90},{reps:6,pct:70},{reps:3,pct:85},{reps:5,pct:75},{reps:4,pct:80}];
 const DEFAULT_SETTINGS={restSeconds:240,weightStep:2.5,barWeight:20,plates:[25,20,15,10,5,2.5,1.25],soundEnabled:true,vibrationEnabled:true,wakeLockEnabled:true};
 const $=id=>document.getElementById(id);
