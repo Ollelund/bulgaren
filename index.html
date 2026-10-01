@@ -70,7 +70,7 @@ hr{border:0;border-top:1px solid #263244;margin:14px 0}
 </div>
 
 <div class="wrap">
-<header><div><h1>Träningsappen</h1><div class="small">Program, progression och statistik</div></div><div class="small">v6.7</div></header>
+<header><div><h1>Träningsappen</h1><div class="small">Program, progression och statistik</div></div><div class="small">v6.7.1</div></header>
 <div id="resumeBanner" class="card hidden" style="border-color:#2563eb">
   <div class="historyHead">
     <div><b>Pågående träningspass</b><div id="resumeText" class="small"></div></div>
@@ -211,7 +211,6 @@ hr{border:0;border-top:1px solid #263244;margin:14px 0}
 </div>
 <div id="cloudUserInfo" class="small" style="margin-top:10px">Ingen användare ännu.</div>
 <button id="syncNowBtn" class="primary full" style="margin-top:12px">Synka nu</button>
-<button id="verifyCloudBtn" class="primary full" style="margin-top:8px">Kontrollera backup</button>
 <button id="restoreCloudBtn" class="primary full" style="margin-top:8px">Återställ från molnet</button>
 <div style="height:1px;background:rgba(255,255,255,.08);margin:14px 0"></div>
 <button id="linkGoogleBtn" class="primary full">Länka till Google</button>
@@ -234,18 +233,9 @@ hr{border:0;border-top:1px solid #263244;margin:14px 0}
     <div class="row"><span>Försök hålla skärmen vaken under pass</span><input id="wakeLockEnabled" class="switch" type="checkbox"></div>
   </div>
 
-  <div class="card">
-    <h3>Egna program</h3>
-    <div class="small">Skapa ett enkelt procentbaserat program. Det sparas för framtida versioner och kan byggas ut vidare.</div>
-    <label style="margin-top:10px">Programnamn</label><input id="customProgramName" type="text" placeholder="Mitt program">
-    <label style="margin-top:10px">Set (en rad per set: reps,procent)</label>
-    <textarea id="customProgramSets" style="width:100%;min-height:110px;background:#0b1323;color:white;border:1px solid #334155;border-radius:12px;padding:12px" placeholder="8,60&#10;5,70&#10;3,80"></textarea>
-    <button id="saveCustomProgramBtn" class="primary full" style="margin-top:10px">Spara eget program</button>
-    <div id="customProgramList" class="small" style="margin-top:10px"></div>
-  </div>
+  
   <div class="card">
     <h3>Backup</h3>
-    <button id="exportBtn" class="primary full">Exportera träningsdata</button>
     <label style="margin-top:12px">Importera tidigare backup</label>
     <input id="importFile" type="file" accept="application/json">
     <div class="small" style="margin-top:8px">Import ersätter nuvarande historik och inställningar med innehållet i backupfilen.</div>
@@ -1188,13 +1178,7 @@ function renderCustomPrograms(){
  const data=getAppData(), list=data.customPrograms||[];
  $('customProgramList').innerHTML=list.length?list.map(p=>`<div class="milestone"><b>${p.name}</b><div>${p.sets.length} set</div></div>`).join(''):'Inga egna program sparade ännu.';
 }
-$('saveCustomProgramBtn').addEventListener('click',()=>{
- const name=$('customProgramName').value.trim();
- const sets=$('customProgramSets').value.split('\n').map(r=>r.trim()).filter(Boolean).map(r=>{const [reps,pct]=r.split(',').map(Number);return {reps,pct}}).filter(x=>x.reps>0&&x.pct>0);
- if(!name||!sets.length){toast('Ange namn och minst ett giltigt set');return}
- const data=getAppData();data.customPrograms=data.customPrograms||[];data.customPrograms.push({id:String(Date.now()),name,sets,createdAt:new Date().toISOString()});saveAppData(data);
- $('customProgramName').value='';$('customProgramSets').value='';renderCustomPrograms();toast('Eget program sparat');
-});
+
 $('saveSettingsBtn').addEventListener('click',()=>{
  const plateVals=$('plates').value.split(',').map(x=>parseFloat(x.trim().replace(',','.'))).filter(x=>x>0);
  settings={restSeconds:Math.max(30,parseInt($('restSeconds').value)||240),weightStep:parseFloat($('weightStep').value)||2.5,barWeight:Math.max(0,parseFloat($('barWeight').value)||20),plates:plateVals.length?plateVals:DEFAULT_SETTINGS.plates,soundEnabled:$('soundEnabled').checked,vibrationEnabled:$('vibrationEnabled').checked,wakeLockEnabled:$('wakeLockEnabled').checked};
@@ -1219,12 +1203,7 @@ $('clearAllDataBtn').addEventListener('click',()=>{
  showView('home');
  toast('All Bulgaren-data har raderats');
 });
-$('exportBtn').addEventListener('click',()=>{
- syncV5FromLegacy();
- const data={app:'Träningsappen',version:5.1,exportedAt:new Date().toISOString(),trainingAppData:getAppData(),currentMax:getCurrentMax(),settings,history:history()};
- const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
- a.href=url;a.download=`bulgaren-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(url);
-});
+
 $('importFile').addEventListener('change',async e=>{
  const f=e.target.files[0];if(!f)return;
  try{const data=JSON.parse(await f.text());
