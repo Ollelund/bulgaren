@@ -43,7 +43,7 @@ hr{border:0;border-top:1px solid #263244;margin:14px 0}
 </head>
 <body>
 <div class="wrap">
-<header><div><h1>Träningsappen</h1><div class="small">Program, progression och statistik</div></div><div class="small">v5</div></header>
+<header><div><h1>Träningsappen</h1><div class="small">Program, progression och statistik</div></div><div class="small">v6.1.1</div></header>
 <div id="resumeBanner" class="card hidden" style="border-color:#2563eb">
   <div class="historyHead">
     <div><b>Pågående träningspass</b><div id="resumeText" class="small"></div></div>
@@ -190,6 +190,7 @@ hr{border:0;border-top:1px solid #263244;margin:14px 0}
 </div>
 <div id="cloudUserInfo" class="small" style="margin-top:10px">Ingen användare ännu.</div>
 <button id="syncNowBtn" class="primary full" style="margin-top:12px">Synka nu</button>
+<button id="verifyCloudBtn" class="secondary full" style="margin-top:8px">Kontrollera backup</button>
 <div id="cloudMessage" class="small" style="margin-top:8px"></div>
 </div></section>
 </div>
@@ -218,8 +219,18 @@ async function initCloud(){
   sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true}});
   let r=await sb.auth.getSession();if(r.error)throw r.error;
   let session=r.data.session;
-  if(!session){r=await sb.auth.signInAnonymously();if(r.error)throw r.error;session=r.data.session}
+  const rememberedCloudUserId=localStorage.getItem('trainingCloudUserId');
+  if(!session){
+    if(rememberedCloudUserId){
+      throw Error('Den tidigare molnsessionen saknas. Ny anonym användare skapades inte, för att undvika dubbletter. Koppla Google-konto eller återställ sessionen.');
+    }
+    r=await sb.auth.signInAnonymously();if(r.error)throw r.error;session=r.data.session;
+  }
   cloudUser=session?.user;if(!cloudUser)throw Error('Ingen användare skapades');
+  if(rememberedCloudUserId && rememberedCloudUserId!==cloudUser.id){
+    throw Error('Molnidentiteten har ändrats. Synkning stoppades för att undvika dubbletter.');
+  }
+  localStorage.setItem('trainingCloudUserId',cloudUser.id);
   if(cEl('cloudUserInfo'))cEl('cloudUserInfo').textContent='Anonymt konto aktivt · ID '+cloudUser.id.slice(0,8)+'…';
   cLast(localStorage.getItem('trainingCloudLastSync'));cStatus(navigator.onLine?'Redo':'Offline');
   if(navigator.onLine)await syncCloud(false);
@@ -234,6 +245,25 @@ async function cSession(program,name,x,i){
   let q=await sb.from('workout_sets').upsert(sets,{onConflict:'session_id,set_number'});if(q.error)throw q.error;
  }
 }
+
+async function inspectCloudBackup(){
+ if(!sb||!cloudUser){cStatus('Inte ansluten');return}
+ try{
+  cStatus('Kontrollerar backup…');
+  const r=await sb.from('workout_sessions')
+    .select('client_id,program_id,completed_at,successful,total_volume,metadata')
+    .eq('program_id','bulgaren')
+    .order('completed_at',{ascending:true});
+  if(r.error)throw r.error;
+  const rows=r.data||[];
+  const unique=new Map();
+  for(const x of rows) unique.set(x.client_id,x);
+  const msg=`Molnet innehåller ${unique.size} unika Bulgaren-pass för den här identiteten.`;
+  cStatus('Backup verifierad',msg);
+  if(typeof toast==='function')toast(msg);
+ }catch(e){console.error(e);cStatus('Kontrollfel',e.message||'Kunde inte läsa backup')}
+}
+
 async function syncCloud(show=true){
  if(cloudSyncBusy||!navigator.onLine||!sb||!cloudUser)return;
  cloudSyncBusy=true;cStatus('Synkar…');
@@ -250,7 +280,7 @@ async function syncCloud(show=true){
 }
 window.addEventListener('online',()=>syncCloud(false));
 window.addEventListener('offline',()=>cStatus('Offline','Lokal data fungerar fortfarande.'));
-document.addEventListener('DOMContentLoaded',()=>{cEl('syncNowBtn')?.addEventListener('click',()=>syncCloud(true));setTimeout(initCloud,300)});
+document.addEventListener('DOMContentLoaded',()=>{cEl('syncNowBtn')?.addEventListener('click',()=>syncCloud(true));cEl('verifyCloudBtn')?.addEventListener('click',inspectCloudBackup);setTimeout(initCloud,300)});
 
 
 const PROGRAM=[{reps:8,pct:60},{reps:1,pct:95},{reps:7,pct:65},{reps:2,pct:90},{reps:6,pct:70},{reps:3,pct:85},{reps:5,pct:75},{reps:4,pct:80}];

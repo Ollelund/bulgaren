@@ -43,3 +43,12 @@ V6 Bulgaren-only
 - Endast Bulgaren visas och används.
 - Triceps synkas inte längre.
 - Eventuell gammal Triceps-data raderas inte automatiskt, för säkerhets skull.
+
+V6.1 Bulgaren
+- Sparar och låser molnidentiteten lokalt.
+- Om Supabase-sessionen försvinner skapas INTE automatiskt en ny anonym användare.
+  Detta förhindrar att samma historik laddas upp under flera user_id.
+- Om molnidentiteten oväntat ändras stoppas synkningen.
+- Ny knapp "Kontrollera backup" läser tillbaka aktuell användares Bulgaren-pass
+  utan att skriva över lokal data.
+- Gamla dubbletter i Supabase raderas inte automatiskt.
