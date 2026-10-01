@@ -39,6 +39,21 @@ canvas{width:100%;height:230px;background:#0b1323;border-radius:12px}
 hr{border:0;border-top:1px solid #263244;margin:14px 0}
 .toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);background:#111827;border:1px solid #475569;padding:10px 14px;border-radius:12px;z-index:30;display:none}
 @media(max-width:430px){.weight{font-size:56px}.timer{font-size:52px}.grid3{grid-template-columns:1fr}.metric b{font-size:21px}}
+
+.heroMax{text-align:center;padding:22px 16px}.heroMax .label{color:var(--muted);font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.heroMax .value{font-size:58px;font-weight:950;line-height:1;margin:8px 0}.heroMax .goal{color:#bfdbfe;font-weight:800;margin-bottom:18px}
+.startBig{font-size:20px;padding:18px}
+.homeProgress{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.workoutProgress{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin:0 0 14px}
+.workoutProgress .seg{height:12px;border-radius:999px;background:#334155;border:1px solid #475569}
+.workoutProgress .seg.ok{background:#16a34a;border-color:#22c55e}.workoutProgress .seg.bad{background:#dc2626;border-color:#ef4444}
+.workoutProgress .seg.current{background:#2563eb;border-color:#93c5fd;box-shadow:0 0 0 2px rgba(96,165,250,.18)}
+.nextWeightBox{background:#0b1323;border:2px solid #3b82f6;border-radius:18px;padding:16px;margin:14px 0}
+.nextWeightBox .nextLabel{font-size:13px;color:#93c5fd;font-weight:900;letter-spacing:.1em}
+.nextWeightBox .nextMain{font-size:34px;font-weight:950;margin:4px 0}.nextWeightBox .nextPlates{color:#dbeafe;font-size:16px;line-height:1.45}
+.resultTitle{font-size:30px;font-weight:950;margin:4px 0 8px}.resultMax{font-size:46px;font-weight:950;margin:8px 0}.resultMeta{color:var(--muted);margin:8px 0 18px}
+@media(max-width:430px){.heroMax .value{font-size:50px}.nextWeightBox .nextMain{font-size:30px}.workoutProgress{gap:4px}}
+
 </style>
 </head>
 <body>
@@ -55,7 +70,7 @@ hr{border:0;border-top:1px solid #263244;margin:14px 0}
 </div>
 
 <div class="wrap">
-<header><div><h1>Träningsappen</h1><div class="small">Program, progression och statistik</div></div><div class="small">v6.6.1.1</div></header>
+<header><div><h1>Träningsappen</h1><div class="small">Program, progression och statistik</div></div><div class="small">v6.7</div></header>
 <div id="resumeBanner" class="card hidden" style="border-color:#2563eb">
   <div class="historyHead">
     <div><b>Pågående träningspass</b><div id="resumeText" class="small"></div></div>
@@ -89,24 +104,32 @@ hr{border:0;border-top:1px solid #263244;margin:14px 0}
 
 <section id="view-home" class="view hidden">
   <button id="backToProgramsBtn" class="ghost full" style="margin-bottom:12px">← Till programöversikten</button>
-  <div class="card">
-    <label>Aktuell maxvikt (kg)</label>
-    <input id="maxWeight" type="number" min="2.5" step="2.5" inputmode="decimal">
-    <div class="small" style="margin:8px 0 12px">Arbetsvikter avrundas till ditt valda viktsteg.</div>
-    <button id="startBtn" class="primary full">Starta pass</button>
+  <div class="card heroMax">
+    <div class="label">Aktuellt max</div>
+    <div id="homeCurrentHero" class="value">–</div>
+    <div id="homeNextGoal" class="goal">Nästa mål: –</div>
+    <button id="startBtn" class="primary full startBig">STARTA BULGAREN</button>
+    <details style="margin-top:14px;text-align:left">
+      <summary class="small" style="cursor:pointer">Ändra maxvikt</summary>
+      <label style="margin-top:10px">Aktuell maxvikt (kg)</label>
+      <input id="maxWeight" type="number" min="2.5" step="2.5" inputmode="decimal">
+    </details>
   </div>
   <div class="card">
-    <div class="grid3">
-      <div class="metric"><span class="small">Nuvarande max</span><b id="homeCurrent">–</b></div>
-      <div class="metric"><span class="small">Högsta klarade</span><b id="homeBest">–</b></div>
-      <div class="metric"><span class="small">Genomförda pass</span><b id="homeSessions">0</b></div>
+    <b>Din utveckling</b>
+    <div class="homeProgress">
+      <div class="metric"><span class="small">Start</span><b id="homeStart">–</b></div>
+      <div class="metric"><span class="small">Nu</span><b id="homeCurrent">–</b></div>
+      <div class="metric"><span class="small">Ökning</span><b id="homeGain">–</b></div>
     </div>
+    <div class="metric" style="margin-top:9px"><span class="small">Senaste pass</span><b id="homeLatest" style="font-size:18px">–</b></div>
   </div>
-  <div class="card"><b>Programmet</b><div id="previewSets" class="sets" style="margin-top:10px"></div></div>
+  <div class="card"><b>Dagens 8 set</b><div id="previewSets" class="sets" style="margin-top:10px"></div></div>
 </section>
 
 <section id="view-workout" class="view hidden">
   <div class="card center">
+    <div id="workoutProgress" class="workoutProgress"></div>
     <div id="setNo" class="setno"></div>
     <div id="reps" class="reps"></div>
     <div id="weight" class="weight"></div>
@@ -123,14 +146,29 @@ hr{border:0;border-top:1px solid #263244;margin:14px 0}
   </div>
 
   <div id="restCard" class="card center hidden">
-    <div class="small">VILA</div>
+    <div class="small" style="font-weight:900;letter-spacing:.12em">VILA</div>
     <div id="timer" class="timer">04:00</div>
     <div class="progress"><div id="timerProgress"></div></div>
-    <div id="nextSetText" class="plates"></div>
+    <div id="nextSetText" class="nextWeightBox"></div>
     <button id="skipBtn" class="ghost full">Hoppa över vila</button>
   </div>
 
   <div class="card"><div id="setList" class="sets"></div></div>
+</section>
+
+<section id="view-result" class="view hidden">
+  <div class="card center">
+    <div id="resultProgress" class="workoutProgress"></div>
+    <div id="resultTitle" class="resultTitle"></div>
+    <div id="resultSummary"></div>
+    <div id="resultMax" class="resultMax"></div>
+    <div id="resultMeta" class="resultMeta"></div>
+    <button id="resultDoneBtn" class="primary full startBig">KLAR</button>
+  </div>
+  <div class="card">
+    <b>Passdetaljer</b>
+    <div id="resultSets" class="sets" style="margin-top:10px"></div>
+  </div>
 </section>
 
 <section id="view-stats" class="view hidden">
@@ -910,15 +948,34 @@ function renderCalendarOverview(h){
  for(let i=27;i>=0;i--){const d=new Date(now);d.setDate(now.getDate()-i);const k=d.toISOString().slice(0,10);days.push({d,k,count:byDay[k]||0})}
  $('calendarOverview').innerHTML=`<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px">${days.map(x=>`<div title="${x.k}: ${x.count} pass" style="aspect-ratio:1;border-radius:7px;display:grid;place-items:center;background:${x.count?'#2563eb':'#1e293b'};color:${x.count?'white':'#64748b'};font-size:11px">${x.d.getDate()}</div>`).join('')}</div>`;
 }
+
+function progressHTML(results,currentIndex=null){
+ return Array.from({length:8},(_,i)=>{
+   const r=results?.[i];
+   const cls=r===true?'ok':r===false?'bad':(i===currentIndex?'current':'');
+   return `<div class="seg ${cls}" title="Set ${i+1}"></div>`;
+ }).join('');
+}
+function workoutVolumeFromState(){
+ let total=0;
+ for(let i=0;i<8;i++) if(state.results[i]!==null) total+=currentWeight(i)*PROGRAM[i].reps;
+ return total;
+}
+
 function renderHome(){
  const h=history(), current=getCurrentMax();
  $('maxWeight').value=current||'';
  $('homeCurrent').textContent=current?`${fmt(current)} kg`:'–';
- const passed=h.filter(x=>x.passed);
- $('homeBest').textContent=passed.length?`${fmt(Math.max(...passed.map(x=>x.max)))} kg`:'–';
- $('homeSessions').textContent=h.length;
+ $('homeCurrentHero').textContent=current?`${fmt(current)} kg`:'–';
+ $('homeNextGoal').textContent=current?`Nästa mål: ${fmt(roundStep(current+settings.weightStep))} kg`:'Ange din maxvikt för att börja';
+ const chronological=[...h].sort((a,b)=>new Date(a.date)-new Date(b.date));
+ const start=chronological.length?chronological[0].max:null;
+ $('homeStart').textContent=start?`${fmt(start)} kg`:'–';
+ $('homeGain').textContent=start&&current?`${current-start>=0?'+':''}${fmt(current-start)} kg`:'–';
+ const latest=h.length?[...h].sort((a,b)=>new Date(b.date)-new Date(a.date))[0]:null;
+ $('homeLatest').textContent=latest?`${latest.count}/8 · ${latest.passed?'Klarat':'Ej klarat'} · ${new Date(latest.date).toLocaleDateString('sv-SE')}`:'Inget pass ännu';
  const base=current||100;
- $('previewSets').innerHTML=PROGRAM.map((s,i)=>`<div class="setrow"><b>${i+1}/8</b><span>${s.reps} reps × ${fmt(roundStep(base*s.pct/100))} kg <span class="small">(${s.pct}%)</span></span><span></span></div>`).join('');
+ $('previewSets').innerHTML=PROGRAM.map((ss,i)=>`<div class="setrow"><b>${i+1}/8</b><span>${ss.reps} reps × ${fmt(roundStep(base*ss.pct/100))} kg <span class="small">(${ss.pct}%)</span></span><span></span></div>`).join('');
 }
 
 async function requestWakeLock(){
@@ -945,6 +1002,7 @@ function renderCurrent(){
  $('reps').textContent=`${s.reps} ${s.reps===1?'REP':'REPS'}`;
  $('weight').textContent=`${fmt(currentWeight(state.idx))} KG`;
  $('plateText').textContent=platePlan(currentWeight(state.idx));
+ $('workoutProgress').innerHTML=progressHTML(state.results,state.idx);
  renderSetList();saveActiveSession();
 }
 function renderSetList(){
@@ -955,7 +1013,7 @@ function renderSetList(){
 }
 function markResult(ok){
  if(state.results[state.idx]!==null)return;
- state.results[state.idx]=ok;state.lastMarkedIndex=state.idx;renderSetList();saveActiveSession();
+ state.results[state.idx]=ok;state.lastMarkedIndex=state.idx;$('workoutProgress').innerHTML=progressHTML(state.results,state.idx+1);renderSetList();saveActiveSession();
  $('successBtn').disabled=true;$('failBtn').disabled=true;$('undoBtn').classList.remove('hidden');
  if(state.idx===7){setTimeout(finishWorkout,250);return}
  startRest();
@@ -964,7 +1022,7 @@ function startRest(){
  state.restEndsAt=Date.now()+settings.restSeconds*1000;state.beep30Played=false;state.endBeepsPlayed=false;
  $('restCard').classList.remove('hidden');
  const ni=state.idx+1;
- $('nextSetText').innerHTML=`<b>NÄSTA: ${PROGRAM[ni].reps} ${PROGRAM[ni].reps===1?'REP':'REPS'} × ${fmt(currentWeight(ni))} KG</b><br><span class="small">${platePlan(currentWeight(ni))}</span>`;
+ $('nextSetText').innerHTML=`<div class="nextLabel">NÄSTA SET · ${ni+1} AV 8</div><div class="nextMain">${PROGRAM[ni].reps} ${PROGRAM[ni].reps===1?'REP':'REPS'} × ${fmt(currentWeight(ni))} KG</div><div class="nextPlates">${platePlan(currentWeight(ni))}</div>`;
  clearInterval(state.timer);saveActiveSession();updateTimerFromClock();state.timer=setInterval(updateTimerFromClock,250);
 }
 function updateTimerFromClock(){
@@ -988,15 +1046,26 @@ function undoLast(){
 function finishWorkout(){
  clearInterval(state.timer);releaseWakeLock();
  const passed=state.results.every(x=>x===true), count=state.results.filter(Boolean).length, nextMax=passed?roundStep(state.max+settings.weightStep):state.max;
- const h=history();
- h.unshift({id:crypto.randomUUID?crypto.randomUUID():String(Date.now()),date:new Date().toISOString(),max:state.max,passed,count,nextMax,results:[...state.results],program:PROGRAM.map((p,i)=>({...p,weight:currentWeight(i)}))});
+ const completedAt=new Date().toISOString();
+ const session={id:crypto.randomUUID?crypto.randomUUID():String(Date.now()),date:completedAt,max:state.max,passed,count,nextMax,results:[...state.results],program:PROGRAM.map((p,i)=>({...p,weight:currentWeight(i)}))};
+ const volume=workoutVolumeFromState();
+ const h=history();h.unshift(session);
  setHistory(h.slice(0,500));localStorage.setItem('bulgarenCurrentMax',nextMax);syncV5FromLegacy();
  clearActiveSession();
- showView('home');
- toast(passed?`Godkänt! Nästa max ${fmt(nextMax)} kg`:`${count}/8. Maxvikten ligger kvar.`);
+ state.active=false;
+ document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));
+ $('view-result').classList.remove('hidden');
+ $('resultProgress').innerHTML=progressHTML(session.results,null);
+ $('resultTitle').textContent=passed?'Bulgaren klarad!':'Passet genomfört';
+ $('resultSummary').innerHTML=passed?`<b>${count}/8 set klarade</b>`:`<b>${count}/8 set klarade</b><div class="small" style="margin-top:4px">Maxvikten ligger kvar.</div>`;
+ $('resultMax').textContent=passed?`Nytt max: ${fmt(nextMax)} kg`:`Max: ${fmt(nextMax)} kg`;
+ $('resultMeta').textContent=`Volym ${fmt(Math.round(volume))} kg · ${new Date(completedAt).toLocaleDateString('sv-SE')}`;
+ $('resultSets').innerHTML=PROGRAM.map((ss,i)=>`<div class="setrow ${session.results[i]===true?'done':'fail'}"><b>${i+1}/8</b><span>${ss.reps} reps × ${fmt(session.program[i].weight)} kg <span class="small">(${ss.pct}%)</span></span><b>${session.results[i]===true?'✓':'✕'}</b></div>`).join('');
+ try{syncCloud()}catch(e){}
 }
 
 $('openBulgarenBtn').addEventListener('click',()=>showView('home'));
+$('resultDoneBtn').addEventListener('click',()=>showView('home'));
 
 
 $('backToProgramsBtn').addEventListener('click',()=>showView('programs'));
