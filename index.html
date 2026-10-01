@@ -55,7 +55,7 @@ hr{border:0;border-top:1px solid #263244;margin:14px 0}
 </div>
 
 <div class="wrap">
-<header><div><h1>Träningsappen</h1><div class="small">Program, progression och statistik</div></div><div class="small">v6.6.1</div></header>
+<header><div><h1>Träningsappen</h1><div class="small">Program, progression och statistik</div></div><div class="small">v6.6.1.1</div></header>
 <div id="resumeBanner" class="card hidden" style="border-color:#2563eb">
   <div class="historyHead">
     <div><b>Pågående träningspass</b><div id="resumeText" class="small"></div></div>
@@ -247,12 +247,12 @@ async function initCloud(){
   let session=r.data.session;
   const rememberedCloudUserId=localStorage.getItem('trainingCloudUserId');
   if(!session){
-    if(rememberedCloudUserId){
-      throw Error('Den tidigare molnsessionen saknas. Ny anonym användare skapades inte, för att undvika dubbletter. Koppla Google-konto eller återställ sessionen.');
-    }
-    r=await sb.auth.signInAnonymously();if(r.error)throw r.error;session=r.data.session;
+    cloudUser=null;
+    cLast(localStorage.getItem('trainingCloudLastSync'));
+    cStatus('Välj konto','Fortsätt med Google eller fortsätt utan konto.');
+    return;
   }
-  cloudUser=session?.user;if(!cloudUser)throw Error('Ingen användare skapades');
+  cloudUser=session.user;
   if(rememberedCloudUserId && rememberedCloudUserId!==cloudUser.id){
     throw Error('Molnidentiteten har ändrats. Synkning stoppades för att undvika dubbletter.');
   }
