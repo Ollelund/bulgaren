@@ -52,3 +52,17 @@ V6.1 Bulgaren
 - Ny knapp "Kontrollera backup" läser tillbaka aktuell användares Bulgaren-pass
   utan att skriva över lokal data.
 - Gamla dubbletter i Supabase raderas inte automatiskt.
+
+RECOVERY BUILD
+- Restores persistent localStorage key trainingAppDataV5.
+- Restores internal persisted schema version 5.
+- Visible app version remains v6.1.
+- Does not delete or reset local data.
+- Do NOT clear browser/site data before testing this build.
+
+V6.2 Bulgaren
+- Internal localStorage key remains trainingAppDataV5 for backward compatibility.
+- Existing workout UUID is used as Supabase client_id when present.
+- Added safe "Återställ från molnet": merges by workout UUID and never deletes local history.
+- Current max is conservatively recalculated from newest successful restored workout.
+- Old cross-user duplicates in Supabase are left untouched for now.

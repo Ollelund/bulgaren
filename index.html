@@ -43,7 +43,7 @@ hr{border:0;border-top:1px solid #263244;margin:14px 0}
 </head>
 <body>
 <div class="wrap">
-<header><div><h1>Träningsappen</h1><div class="small">Program, progression och statistik</div></div><div class="small">v6.1.1</div></header>
+<header><div><h1>Träningsappen</h1><div class="small">Program, progression och statistik</div></div><div class="small">v6.2.1</div></header>
 <div id="resumeBanner" class="card hidden" style="border-color:#2563eb">
   <div class="historyHead">
     <div><b>Pågående träningspass</b><div id="resumeText" class="small"></div></div>
@@ -191,6 +191,7 @@ hr{border:0;border-top:1px solid #263244;margin:14px 0}
 <div id="cloudUserInfo" class="small" style="margin-top:10px">Ingen användare ännu.</div>
 <button id="syncNowBtn" class="primary full" style="margin-top:12px">Synka nu</button>
 <button id="verifyCloudBtn" class="secondary full" style="margin-top:8px">Kontrollera backup</button>
+<button id="restoreCloudBtn" class="secondary full" style="margin-top:8px">Återställ från molnet</button>
 <div id="cloudMessage" class="small" style="margin-top:8px"></div>
 </div></section>
 </div>
@@ -212,7 +213,7 @@ let sb=null,cloudUser=null,cloudSyncBusy=false;
 function cEl(id){return document.getElementById(id)}
 function cStatus(x,m=''){if(cEl('cloudStatus'))cEl('cloudStatus').textContent=x;if(cEl('cloudMessage'))cEl('cloudMessage').textContent=m}
 function cLast(x){if(cEl('cloudLastSync'))cEl('cloudLastSync').textContent=x?new Date(x).toLocaleString('sv-SE'):'–'}
-function cId(program,x,i){let raw=[program,x.date||'',x.weight||x.max||'',i].join('|'),h=2166136261;for(let j=0;j<raw.length;j++){h^=raw.charCodeAt(j);h=Math.imul(h,16777619)}return program+'-'+(h>>>0).toString(16)}
+function cId(program,x,i){if(x&&x.id)return String(x.id);let raw=[program,x.date||'',x.weight||x.max||'',i].join('|'),h=2166136261;for(let j=0;j<raw.length;j++){h^=raw.charCodeAt(j);h=Math.imul(h,16777619)}return program+'-'+(h>>>0).toString(16)}
 async function initCloud(){
  try{
   if(!window.supabase)throw Error('Supabase kunde inte laddas');
@@ -243,6 +244,59 @@ async function cSession(program,name,x,i){
  if(Array.isArray(x.results)&&x.results.length){
   let sets=x.results.map((v,n)=>({user_id:cloudUser.id,session_id:r.data.id,set_number:n+1,exercise_id:program,exercise_name:name,target_reps:program==='triceps'?10:null,target_weight:program==='triceps'?Number(x.weight)||null:null,actual_weight:program==='triceps'?Number(x.weight)||null:null,successful:v===null?null:!!v,metadata:{local_result:v}}));
   let q=await sb.from('workout_sets').upsert(sets,{onConflict:'session_id,set_number'});if(q.error)throw q.error;
+ }
+}
+
+
+async function restoreCloudBackup(){
+ if(!sb||!cloudUser){cStatus('Inte ansluten');return}
+ if(!confirm('Återställa/komplettera Bulgaren-data från molnbackup? Befintlig lokal historik raderas inte.'))return;
+ try{
+  cStatus('Återställer…');
+  const r=await sb.from('workout_sessions')
+    .select('client_id,completed_at,metadata')
+    .eq('program_id','bulgaren')
+    .order('completed_at',{ascending:true});
+  if(r.error)throw r.error;
+
+  const d=getAppData();
+  if(!d.programs)d.programs={};
+  if(!d.programs.bulgaren)d.programs.bulgaren={history:[],currentMax:null,settings:null,activeSession:null};
+  const b=d.programs.bulgaren;
+  if(!Array.isArray(b.history))b.history=[];
+
+  const byId=new Map();
+  for(const x of b.history){
+    if(x&&x.id)byId.set(String(x.id),x);
+  }
+  let added=0,updated=0;
+  for(const row of (r.data||[])){
+    const x=(row.metadata&&typeof row.metadata==='object')?row.metadata:{};
+    if(!x.id && row.client_id)x.id=row.client_id;
+    if(!x.date && row.completed_at)x.date=row.completed_at;
+    if(!x.id)continue;
+    if(byId.has(String(x.id))){
+      Object.assign(byId.get(String(x.id)),x); updated++;
+    }else{
+      b.history.push(x); byId.set(String(x.id),x); added++;
+    }
+  }
+  b.history.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
+
+  // Recalculate current max conservatively from successful history.
+  const successful=b.history.filter(x=>x&&x.passed===true);
+  if(successful.length){
+    const newest=successful.slice().sort((a,b)=>new Date(b.date||0)-new Date(a.date||0))[0];
+    if(Number.isFinite(Number(newest.nextMax))) b.currentMax=Number(newest.nextMax);
+  }
+
+  saveAppData(d);
+  try{syncLegacyFromV5()}catch(e){}
+  cStatus('Återställd',`Molnbackup sammanfogad: ${added} pass tillagda, ${updated} uppdaterade.`);
+  if(typeof toast==='function')toast('Molnbackup återställd');
+  setTimeout(()=>location.reload(),700);
+ }catch(e){
+  console.error(e);cStatus('Återställningsfel',e.message||'Kunde inte återställa backup');
  }
 }
 
@@ -280,7 +334,7 @@ async function syncCloud(show=true){
 }
 window.addEventListener('online',()=>syncCloud(false));
 window.addEventListener('offline',()=>cStatus('Offline','Lokal data fungerar fortfarande.'));
-document.addEventListener('DOMContentLoaded',()=>{cEl('syncNowBtn')?.addEventListener('click',()=>syncCloud(true));cEl('verifyCloudBtn')?.addEventListener('click',inspectCloudBackup);setTimeout(initCloud,300)});
+document.addEventListener('DOMContentLoaded',()=>{cEl('syncNowBtn')?.addEventListener('click',()=>syncCloud(true));cEl('verifyCloudBtn')?.addEventListener('click',inspectCloudBackup);cEl('restoreCloudBtn')?.addEventListener('click',restoreCloudBackup);setTimeout(initCloud,300)});
 
 
 const PROGRAM=[{reps:8,pct:60},{reps:1,pct:95},{reps:7,pct:65},{reps:2,pct:90},{reps:6,pct:70},{reps:3,pct:85},{reps:5,pct:75},{reps:4,pct:80}];
