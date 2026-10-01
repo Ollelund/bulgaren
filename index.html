@@ -42,8 +42,20 @@ hr{border:0;border-top:1px solid #263244;margin:14px 0}
 </style>
 </head>
 <body>
+<div id="authWelcome" style="display:none;position:fixed;inset:0;z-index:9999;background:#11151b;overflow:auto">
+  <div style="max-width:520px;margin:0 auto;padding:48px 20px 32px;min-height:100vh;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center">
+    <div style="font-size:34px;font-weight:900;line-height:1.05;margin-bottom:10px">Välkommen till<br>Träningsappen</div>
+    <div class="muted" style="font-size:16px;line-height:1.5;margin-bottom:28px">Välj hur du vill börja. Du kan använda appen utan Google och länka ditt konto senare.</div>
+    <button id="welcomeGoogleBtn" class="primary full" style="font-size:17px;padding:15px">Fortsätt med Google</button>
+    <div class="muted" style="font-size:13px;margin:8px 4px 18px">Skapa ett nytt konto eller logga in på ditt befintliga konto. Befintlig träningsdata hämtas automatiskt.</div>
+    <button id="welcomeAnonBtn" class="full" style="font-size:17px;padding:15px;background:#3b414a;color:#fff;border:1px solid #6b7280">Fortsätt utan konto</button>
+    <div class="muted" style="font-size:13px;margin:8px 4px 0">Ett anonymt konto skapas. Du kan länka det till Google senare under Inställningar.</div>
+    <div id="welcomeStatus" class="muted" style="margin-top:22px;text-align:center"></div>
+  </div>
+</div>
+
 <div class="wrap">
-<header><div><h1>Träningsappen</h1><div class="small">Program, progression och statistik</div></div><div class="small">v6.5.1</div></header>
+<header><div><h1>Träningsappen</h1><div class="small">Program, progression och statistik</div></div><div class="small">v6.6.1</div></header>
 <div id="resumeBanner" class="card hidden" style="border-color:#2563eb">
   <div class="historyHead">
     <div><b>Pågående träningspass</b><div id="resumeText" class="small"></div></div>
@@ -165,7 +177,6 @@ hr{border:0;border-top:1px solid #263244;margin:14px 0}
 <button id="restoreCloudBtn" class="primary full" style="margin-top:8px">Återställ från molnet</button>
 <div style="height:1px;background:rgba(255,255,255,.08);margin:14px 0"></div>
 <button id="linkGoogleBtn" class="primary full">Länka till Google</button>
-<button id="loginGoogleBtn" class="primary full" style="margin-top:8px">Logga in med Google / återställ data</button>
 <button id="logoutGoogleBtn" class="full" style="margin-top:8px;background:#3b414a;color:#fff;border:1px solid #6b7280">Logga ut från den här enheten</button>
 <div id="googleLinkStatus" class="small" style="margin-top:8px">Google-konto är inte kopplat ännu.</div>
 <div id="cloudMessage" class="small" style="margin-top:8px"></div>
@@ -284,6 +295,102 @@ async function refreshGoogleLinkStatus(){
 
 
 
+
+async function restoreCloudForSignedInUser(){
+ if(!sb)return {count:0,currentMax:null};
+ const {data:{session}}=await sb.auth.getSession();
+ if(!session)return {count:0,currentMax:null};
+ cloudUser=session.user;
+ localStorage.setItem('trainingCloudUserId',cloudUser.id);
+
+ const q=await sb.from('workout_sessions')
+   .select('client_id,completed_at,metadata')
+   .eq('program_id','bulgaren')
+   .order('completed_at',{ascending:true});
+ if(q.error)throw q.error;
+
+ const d=getAppData();
+ if(!d.programs)d.programs={};
+ if(!d.programs.bulgaren)d.programs.bulgaren={history:[],currentMax:null,settings:null,activeSession:null};
+ const b=d.programs.bulgaren;
+ if(!Array.isArray(b.history))b.history=[];
+ const byId=new Map(b.history.filter(Boolean).map(x=>[String(x.id||''),x]));
+ for(const row of (q.data||[])){
+   const x=(row.metadata&&typeof row.metadata==='object')?row.metadata:{};
+   if(!x.id)x.id=row.client_id;
+   if(!x.date)x.date=row.completed_at;
+   if(!x.id)continue;
+   const key=String(x.id);
+   if(byId.has(key))Object.assign(byId.get(key),x);
+   else {b.history.push(x);byId.set(key,x)}
+ }
+ b.history.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
+ const successful=b.history.filter(x=>x?.passed===true).sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
+ if(successful.length && Number.isFinite(Number(successful[0].nextMax))) b.currentMax=Number(successful[0].nextMax);
+ saveAppData(d);
+ try{syncLegacyFromV5()}catch(e){}
+ return {count:(q.data||[]).length,currentMax:b.currentMax};
+}
+async function welcomeGoogle(){
+ if(!sb)return;
+ const st=document.getElementById('welcomeStatus');
+ try{
+   if(st)st.textContent='Öppnar Google…';
+   localStorage.setItem('trainingWelcomeGoogle','1');
+   const {error}=await sb.auth.signInWithOAuth({
+     provider:'google',
+     options:{redirectTo:'https://ollelund.github.io/bulgaren/'}
+   });
+   if(error)throw error;
+ }catch(e){
+   localStorage.removeItem('trainingWelcomeGoogle');
+   if(st)st.textContent='Kunde inte starta Google-inloggningen: '+(e.message||e);
+ }
+}
+async function welcomeAnonymous(){
+ if(!sb)return;
+ const st=document.getElementById('welcomeStatus');
+ try{
+   if(st)st.textContent='Skapar anonymt konto…';
+   const {data,error}=await sb.auth.signInAnonymously();
+   if(error)throw error;
+   if(!data?.user)throw new Error('Ingen användare skapades');
+   cloudUser=data.user;
+   localStorage.setItem('trainingCloudUserId',cloudUser.id);
+   document.getElementById('authWelcome').style.display='none';
+   await refreshCloudAccountSummary();
+   try{await syncCloud()}catch(e){}
+ }catch(e){
+   if(st)st.textContent='Kunde inte skapa anonymt konto: '+(e.message||e);
+ }
+}
+async function bootstrapWelcome(){
+ if(!sb)return;
+ const welcome=document.getElementById('authWelcome');
+ const {data:{session}}=await sb.auth.getSession();
+ if(!session){
+   welcome.style.display='block';
+   return;
+ }
+ cloudUser=session.user;
+ localStorage.setItem('trainingCloudUserId',cloudUser.id);
+
+ // A Google OAuth return (or a permanent Google session) safely restores/merges cloud data.
+ if(!session.user.is_anonymous){
+   try{
+     const r=await restoreCloudForSignedInUser();
+     if(localStorage.getItem('trainingWelcomeGoogle')==='1'){
+       localStorage.removeItem('trainingWelcomeGoogle');
+       localStorage.setItem('trainingRestoreSuccess',JSON.stringify({count:r.count,currentMax:r.currentMax,at:Date.now()}));
+       location.reload();
+       return;
+     }
+   }catch(e){console.error('Automatic cloud restore',e)}
+ }
+ welcome.style.display='none';
+ await refreshCloudAccountSummary();
+}
+
 function fmtCloudTime(iso){
  if(!iso)return 'Ingen backup registrerad ännu';
  try{return 'Senast säkerhetskopierad: '+new Intl.DateTimeFormat('sv-SE',{dateStyle:'medium',timeStyle:'short'}).format(new Date(iso))}
@@ -307,6 +414,10 @@ async function refreshCloudAccountSummary(){
   const google=(data?.identities||[]).find(x=>x.provider==='google');
   const email=google?.identity_data?.email || session.user?.email || null;
   if(emailEl)emailEl.textContent=email ? email+' ✓' : (session.user?.is_anonymous?'Inte länkat till Google':'Google-konto kopplat ✓');
+  const linkBtn=document.getElementById('linkGoogleBtn');
+  const logoutBtn=document.getElementById('logoutGoogleBtn');
+  if(linkBtn)linkBtn.style.display=session.user?.is_anonymous?'block':'none';
+  if(logoutBtn)logoutBtn.style.display=session.user?.is_anonymous?'none':'block';
   if(stateEl)stateEl.textContent='Aktiv ✓';
   if(timeEl)timeEl.textContent=fmtCloudTime(localStorage.getItem('trainingCloudLastSync'));
  }catch(e){
@@ -323,7 +434,8 @@ async function logoutCurrentDevice(){
   localStorage.removeItem('trainingGoogleLinkExpectedUserId');
   localStorage.removeItem('trainingGoogleRestoreRequested');
   cloudUser=null;
-  cStatus('Utloggad','Den lokala träningsdatan finns kvar. Logga in med Google för att aktivera molnbackup igen.');
+  cStatus('Utloggad','Den lokala träningsdatan finns kvar på enheten.');
+  document.getElementById('authWelcome').style.display='block';
   await refreshCloudAccountSummary();
  }catch(e){
   cStatus('Utloggningsfel',e.message||'Kunde inte logga ut');
@@ -540,7 +652,7 @@ async function syncCloud(show=true){
 }
 window.addEventListener('online',()=>syncCloud(false));
 window.addEventListener('offline',()=>cStatus('Offline','Lokal data fungerar fortfarande.'));
-document.addEventListener('DOMContentLoaded',()=>{cEl('syncNowBtn')?.addEventListener('click',()=>syncCloud(true));cEl('verifyCloudBtn')?.addEventListener('click',inspectCloudBackup);cEl('restoreCloudBtn')?.addEventListener('click',restoreCloudBackup);cEl('linkGoogleBtn')?.addEventListener('click',linkGoogleIdentity);cEl('loginGoogleBtn')?.addEventListener('click',loginGoogleAndRestore);cEl('logoutGoogleBtn')?.addEventListener('click',logoutCurrentDevice);setTimeout(async()=>{await initCloud();await verifyIdentityAfterRedirect();await completeGoogleRestoreIfRequested();await refreshCloudAccountSummary()},300);showPendingRestoreSuccess()});
+document.addEventListener('DOMContentLoaded',()=>{cEl('syncNowBtn')?.addEventListener('click',()=>syncCloud(true));cEl('verifyCloudBtn')?.addEventListener('click',inspectCloudBackup);cEl('restoreCloudBtn')?.addEventListener('click',restoreCloudBackup);cEl('linkGoogleBtn')?.addEventListener('click',linkGoogleIdentity);cEl('logoutGoogleBtn')?.addEventListener('click',logoutCurrentDevice);cEl('welcomeGoogleBtn')?.addEventListener('click',welcomeGoogle);cEl('welcomeAnonBtn')?.addEventListener('click',welcomeAnonymous);setTimeout(async()=>{await initCloud();await verifyIdentityAfterRedirect();await bootstrapWelcome()},300);showPendingRestoreSuccess()});
 
 
 const PROGRAM=[{reps:8,pct:60},{reps:1,pct:95},{reps:7,pct:65},{reps:2,pct:90},{reps:6,pct:70},{reps:3,pct:85},{reps:5,pct:75},{reps:4,pct:80}];
