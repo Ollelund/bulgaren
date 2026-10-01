@@ -43,7 +43,7 @@ hr{border:0;border-top:1px solid #263244;margin:14px 0}
 </head>
 <body>
 <div class="wrap">
-<header><div><h1>Träningsappen</h1><div class="small">Program, progression och statistik</div></div><div class="small">v6.2.1</div></header>
+<header><div><h1>Träningsappen</h1><div class="small">Program, progression och statistik</div></div><div class="small">v6.3.1</div></header>
 <div id="resumeBanner" class="card hidden" style="border-color:#2563eb">
   <div class="historyHead">
     <div><b>Pågående träningspass</b><div id="resumeText" class="small"></div></div>
@@ -192,6 +192,9 @@ hr{border:0;border-top:1px solid #263244;margin:14px 0}
 <button id="syncNowBtn" class="primary full" style="margin-top:12px">Synka nu</button>
 <button id="verifyCloudBtn" class="secondary full" style="margin-top:8px">Kontrollera backup</button>
 <button id="restoreCloudBtn" class="secondary full" style="margin-top:8px">Återställ från molnet</button>
+<div style="height:1px;background:rgba(255,255,255,.08);margin:14px 0"></div>
+<button id="linkGoogleBtn" class="secondary full">Fortsätt med Google</button>
+<div id="googleLinkStatus" class="small" style="margin-top:8px">Google-konto är inte kopplat ännu.</div>
 <div id="cloudMessage" class="small" style="margin-top:8px"></div>
 </div></section>
 </div>
@@ -234,7 +237,7 @@ async function initCloud(){
   localStorage.setItem('trainingCloudUserId',cloudUser.id);
   if(cEl('cloudUserInfo'))cEl('cloudUserInfo').textContent='Anonymt konto aktivt · ID '+cloudUser.id.slice(0,8)+'…';
   cLast(localStorage.getItem('trainingCloudLastSync'));cStatus(navigator.onLine?'Redo':'Offline');
-  if(navigator.onLine)await syncCloud(false);
+  if(navigator.onLine)await syncCloud(false);await refreshGoogleLinkStatus();
  }catch(e){console.error(e);cStatus('Lokalt läge','Molnbackup kunde inte startas. Lokal data påverkas inte.')}
 }
 function cVol(program,x){try{return Number(x.volume)||(program==='bulgaren'?Number(sessionTonnage(x)):Number(triVolume(x)))||0}catch(e){return Number(x.volume)||0}}
@@ -247,6 +250,62 @@ async function cSession(program,name,x,i){
  }
 }
 
+
+
+async function refreshGoogleLinkStatus(){
+ if(!sb||!cloudUser)return;
+ try{
+  const r=await sb.auth.getUserIdentities();
+  if(r.error)throw r.error;
+  const identities=r.data?.identities||[];
+  const google=identities.find(x=>x.provider==='google');
+  const el=cEl('googleLinkStatus');
+  const btn=cEl('linkGoogleBtn');
+  if(google){
+    if(el)el.textContent='Google-konto kopplat. Molnbackupen kan återfås efter Google-inloggning på en ny enhet.';
+    if(btn){btn.textContent='Google-konto kopplat ✓';btn.disabled=true}
+  }else{
+    if(el)el.textContent='Google-konto är inte kopplat ännu.';
+    if(btn){btn.textContent='Fortsätt med Google';btn.disabled=false}
+  }
+ }catch(e){console.error('Google identity status',e)}
+}
+async function linkGoogleIdentity(){
+ if(!sb||!cloudUser){cStatus('Inte ansluten');return}
+ try{
+  // Critical safety check: link only while the expected current Supabase user is signed in.
+  const remembered=localStorage.getItem('trainingCloudUserId');
+  if(!remembered||remembered!==cloudUser.id)throw Error('Molnidentiteten stämmer inte. Google-koppling stoppades.');
+  localStorage.setItem('trainingGoogleLinkExpectedUserId',cloudUser.id);
+  const r=await sb.auth.linkIdentity({
+    provider:'google',
+    options:{redirectTo:'https://ollelund.github.io/bulgaren/'}
+  });
+  if(r.error)throw r.error;
+ }catch(e){
+  console.error('Google linking',e);
+  cStatus('Google-fel',e.message||'Kunde inte starta Google-koppling');
+ }
+}
+async function verifyIdentityAfterRedirect(){
+ if(!sb)return;
+ try{
+  const r=await sb.auth.getSession();
+  const uid=r.data?.session?.user?.id;
+  if(!uid)return;
+  const expected=localStorage.getItem('trainingGoogleLinkExpectedUserId');
+  if(expected){
+    if(uid!==expected){
+      cStatus('Säkerhetsstopp','Google-flödet gav en annan användare. Ingen data har flyttats.');
+      return;
+    }
+    localStorage.removeItem('trainingGoogleLinkExpectedUserId');
+  }
+  cloudUser=r.data.session.user;
+  localStorage.setItem('trainingCloudUserId',uid);
+  await refreshGoogleLinkStatus();
+ }catch(e){console.error('Post OAuth verify',e)}
+}
 
 async function restoreCloudBackup(){
  if(!sb||!cloudUser){cStatus('Inte ansluten');return}
@@ -334,7 +393,7 @@ async function syncCloud(show=true){
 }
 window.addEventListener('online',()=>syncCloud(false));
 window.addEventListener('offline',()=>cStatus('Offline','Lokal data fungerar fortfarande.'));
-document.addEventListener('DOMContentLoaded',()=>{cEl('syncNowBtn')?.addEventListener('click',()=>syncCloud(true));cEl('verifyCloudBtn')?.addEventListener('click',inspectCloudBackup);cEl('restoreCloudBtn')?.addEventListener('click',restoreCloudBackup);setTimeout(initCloud,300)});
+document.addEventListener('DOMContentLoaded',()=>{cEl('syncNowBtn')?.addEventListener('click',()=>syncCloud(true));cEl('verifyCloudBtn')?.addEventListener('click',inspectCloudBackup);cEl('restoreCloudBtn')?.addEventListener('click',restoreCloudBackup);cEl('linkGoogleBtn')?.addEventListener('click',linkGoogleIdentity);setTimeout(async()=>{await initCloud();await verifyIdentityAfterRedirect()},300)});
 
 
 const PROGRAM=[{reps:8,pct:60},{reps:1,pct:95},{reps:7,pct:65},{reps:2,pct:90},{reps:6,pct:70},{reps:3,pct:85},{reps:5,pct:75},{reps:4,pct:80}];
